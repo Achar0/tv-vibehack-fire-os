@@ -25,4 +25,54 @@
         <item name="android:focusable">true</item>
         <item name="android:clickable">true</item>
     </style>
+
+    <!-- Two-pane Settings: category on the left, rows on the right. Children take the row's focus state. -->
+    <style name="SettingsCategory">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">56dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:background">@drawable/setting_option_bg</item>
+        <item name="android:textColor">@drawable/setting_option_text</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:fontFamily">@font/outfit</item>
+        <item name="android:fontVariationSettings">\'wght\' 500</item>
+        <item name="android:focusable">true</item>
+        <item name="android:clickable">true</item>
+    </style>
+
+    <style name="SettingsRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">64dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:paddingStart">22dp</item>
+        <item name="android:paddingEnd">22dp</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:background">@drawable/setting_option_bg</item>
+        <item name="android:focusable">true</item>
+        <item name="android:clickable">true</item>
+    </style>
+
+    <style name="SettingsRowLabel">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:duplicateParentState">true</item>
+        <item name="android:textColor">@drawable/setting_option_text</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:fontFamily">@font/outfit</item>
+        <item name="android:fontVariationSettings">\'wght\' 500</item>
+    </style>
+
+    <style name="SettingsRowValue">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:duplicateParentState">true</item>
+        <item name="android:textColor">@drawable/setting_option_text</item>
+        <item name="android:alpha">0.7</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:fontFamily">@font/outfit</item>
+    </style>
 </resources>

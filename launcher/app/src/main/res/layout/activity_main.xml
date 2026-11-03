@@ -187,6 +187,11 @@
         android:alpha="0"
         android:importantForAccessibility="no" />
 
-    <!-- Settings Fullscreen Overlay -->
-    <include layout="@layout/overlay_settings" />
+    <!-- Settings: inflated on first open (SettingsPanel) -->
+    <ViewStub
+        android:id="@+id/settingsStub"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:inflatedId="@+id/settingsOverlay"
+        android:layout="@layout/overlay_settings" />
 </FrameLayout>

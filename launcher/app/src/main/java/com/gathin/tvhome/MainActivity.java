@@ -57,7 +57,7 @@ import java.util.Locale;
 /**
  * tvOS style home: black, a pinned dock row, an app grid, and one glass highlight that springs between tiles.
  */
-public class MainActivity extends Activity implements AppAdapter.TileListener {
+public class MainActivity extends Activity implements AppAdapter.TileListener, SettingsPanel.Host {
 
     /** Tiles per row and dock slots (res/values/config.xml, columns). Set in onCreate. */
     static int COLUMNS = 4;
@@ -82,10 +82,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private float peekOffset;
     private String peekDepthPref = "ultra";
     private boolean isTopBarShowText = true;
-    private View settingsOverlay;
-    private TextView btnTopStyleText, btnTopStyleIcon;
-    private TextView btnPeekUltra, btnPeekBalanced, btnPeekNone;
-    private TextView btnWallAuto, btnWallDay, btnWallNight;
+    private SettingsPanel settingsPanel;
     private SpringAnimation springX, springY;
     private float glassTargetX, glassTargetY;
     private boolean glassShown;
@@ -169,7 +166,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
         View btnSettings = findViewById(R.id.btnSettings);
         btnWifi.setOnClickListener(v -> open(new Intent(Settings.ACTION_WIFI_SETTINGS)));
-        btnSettings.setOnClickListener(v -> showSettings());
+        settingsPanel = new SettingsPanel(this, findViewById(R.id.settingsStub), this);
+        btnSettings.setOnClickListener(v -> settingsPanel.show());
         isTopBarShowText = prefs.getBoolean("top_bar_show_text", true);
         applyTopBarStyle(isTopBarShowText);
 
@@ -251,7 +249,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** The Settings overlay when it is on screen, or null. */
     private View openOverlay() {
-        if (settingsOverlay != null && settingsOverlay.getVisibility() == View.VISIBLE) return settingsOverlay;
+        if (settingsPanel != null && settingsPanel.isShowing()) return settingsPanel.root();
         return null;
     }
 
@@ -298,8 +296,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public void onBackPressed() {
-        if (settingsOverlay != null && settingsOverlay.getVisibility() == View.VISIBLE) {
-            hideSettings();
+        if (settingsPanel != null && settingsPanel.onBack()) {
+            if (!settingsPanel.isShowing()) {
+                View btn = findViewById(R.id.btnSettings);
+                if (btn != null) btn.requestFocus();
+            }
             return;
         }
         View focused = getCurrentFocus();
@@ -702,93 +703,54 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         updateWifiLabel();
     }
 
-    private void showSettings() {
-        if (settingsOverlay == null) {
-            settingsOverlay = findViewById(R.id.settingsOverlay);
-            findViewById(R.id.btnSettingsClose).setOnClickListener(v -> hideSettings());
-
-            btnTopStyleText = findViewById(R.id.btnTopStyleText);
-            btnTopStyleIcon = findViewById(R.id.btnTopStyleIcon);
-            btnPeekUltra = findViewById(R.id.btnPeekUltra);
-            btnPeekBalanced = findViewById(R.id.btnPeekBalanced);
-            btnPeekNone = findViewById(R.id.btnPeekNone);
-            btnWallAuto = findViewById(R.id.btnWallAuto);
-            btnWallDay = findViewById(R.id.btnWallDay);
-            btnWallNight = findViewById(R.id.btnWallNight);
-
-            btnTopStyleText.setOnClickListener(v -> setTopBarStyle(true));
-            btnTopStyleIcon.setOnClickListener(v -> setTopBarStyle(false));
-
-            btnPeekUltra.setOnClickListener(v -> setPeekDepth("ultra"));
-            btnPeekBalanced.setOnClickListener(v -> setPeekDepth("balanced"));
-            btnPeekNone.setOnClickListener(v -> setPeekDepth("none"));
-
-            btnWallAuto.setOnClickListener(v -> setWallpaperTheme("auto"));
-            btnWallDay.setOnClickListener(v -> setWallpaperTheme("day"));
-            btnWallNight.setOnClickListener(v -> setWallpaperTheme("night"));
-
-            findViewById(R.id.btnSysSettings).setOnClickListener(v -> open(new Intent(Settings.ACTION_SETTINGS)));
-            findViewById(R.id.btnSysWifi).setOnClickListener(v -> open(new Intent(Settings.ACTION_WIFI_SETTINGS)));
-            findViewById(R.id.btnSysApps).setOnClickListener(v -> open(new Intent(Settings.ACTION_MANAGE_ALL_APPLICATIONS_SETTINGS)));
-        }
-
-        updateSettingsUI();
-        settingsOverlay.setVisibility(View.VISIBLE);
-        settingsOverlay.setAlpha(0f);
-        settingsOverlay.animate().alpha(1f).setDuration(220).start();
-        findViewById(R.id.btnSettingsClose).requestFocus();
-    }
-
     /** Home pressed while the launcher is open: always show the clean home screen. */
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        if (settingsOverlay != null) settingsOverlay.setVisibility(View.GONE);
+        if (settingsPanel != null) settingsPanel.hide(false);
     }
 
-    private void hideSettings() {
-        if (settingsOverlay == null || settingsOverlay.getVisibility() != View.VISIBLE) return;
-        settingsOverlay.animate().alpha(0f).setDuration(180).withEndAction(() -> {
-            settingsOverlay.setVisibility(View.GONE);
-            View btn = findViewById(R.id.btnSettings);
-            if (btn != null) btn.requestFocus();
-        }).start();
+    // ---- SettingsPanel.Host --------------------------------------------------------------------
+
+    @Override
+    public boolean topBarShowsText() {
+        return isTopBarShowText;
     }
 
-    private void updateSettingsUI() {
-        if (btnTopStyleText == null) return;
-        btnTopStyleText.setSelected(isTopBarShowText);
-        btnTopStyleIcon.setSelected(!isTopBarShowText);
-
-        btnPeekUltra.setSelected("ultra".equals(peekDepthPref));
-        btnPeekBalanced.setSelected("balanced".equals(peekDepthPref));
-        btnPeekNone.setSelected("none".equals(peekDepthPref));
-
-        String wTheme = getSharedPreferences("tvhome_prefs", MODE_PRIVATE).getString("wallpaper_theme", "auto");
-        btnWallAuto.setSelected("auto".equals(wTheme));
-        btnWallDay.setSelected("day".equals(wTheme));
-        btnWallNight.setSelected("night".equals(wTheme));
+    @Override
+    public String peekDepth() {
+        return peekDepthPref;
     }
 
-    private void setTopBarStyle(boolean showText) {
+    @Override
+    public String wallpaperTheme() {
+        return getSharedPreferences("tvhome_prefs", MODE_PRIVATE).getString("wallpaper_theme", "auto");
+    }
+
+    @Override
+    public void openSystem(Intent intent) {
+        open(intent);
+    }
+
+    @Override
+    public void setTopBarStyle(boolean showText) {
         getSharedPreferences("tvhome_prefs", MODE_PRIVATE).edit().putBoolean("top_bar_show_text", showText).apply();
         applyTopBarStyle(showText);
-        updateSettingsUI();
     }
 
-    private void setPeekDepth(String depth) {
+    @Override
+    public void setPeekDepth(String depth) {
         peekDepthPref = depth;
         getSharedPreferences("tvhome_prefs", MODE_PRIVATE).edit().putString("dock_peek_depth", depth).apply();
         updatePeekOffset();
         if (isDockPeeking) {
             setDockPeek(true, true);
         }
-        updateSettingsUI();
     }
 
-    private void setWallpaperTheme(String theme) {
+    @Override
+    public void setWallpaperTheme(String theme) {
         getSharedPreferences("tvhome_prefs", MODE_PRIVATE).edit().putString("wallpaper_theme", theme).apply();
         updateWallpaper();
-        updateSettingsUI();
     }
 }
