@@ -1,28 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Launcher configuration. Edit this file, then run launcher/build-and-install.sh.
-  Package names: on the TV run `pm list packages` (tools/tv.py 'pm list packages').
+  Launcher configuration (Fire TV Stick 4K, AFTKM). Edit this file, then rebuild and install.
+  Package names: on the TV run `pm list packages`.
 -->
 <resources>
 
     <!-- Apps pinned to the dock row at the bottom, in this order. Missing apps are skipped. -->
     <string-array name="dock_apps">
-        <item>com.stremio.one</item>
-        <item>com.google.android.youtube.tv</item>
-        <item>com.netflix.ninja</item>
-        <item>com.apple.atve.androidtv.appletv</item>
-        <item>com.gathin.tvhome.inputs</item>
+        <item>com.xiaodianshi.tv.yst</item>      <!-- Bilibili -->
+        <item>com.amazon.firetv.youtube</item>   <!-- YouTube -->
+        <item>com.ugreen.nasprotv</item>         <!-- UGREEN NAS -->
+        <item>com.phlox.tvwebbrowser</item>      <!-- TV Bro browser -->
+        <item>io.github.jqssun.airplay</item>    <!-- AirPlay receiver (open source): screen cast from iPhone, iPad -->
     </string-array>
 
-    <!-- Apps never shown as tiles (e.g. the Live TV app, which the Inputs menu already covers).
-         Add com.gathin.tvhome.inputs to hide the Inputs tile on devices without HDMI/tuner inputs. -->
+    <!-- Apps never shown as tiles. Fire Stick has no HDMI/tuner inputs, so the Inputs tile is hidden. -->
     <string-array name="hidden_apps">
-        <item>com.mediatek.wwtv.tvcenter</item>
-        <item>com.mitv.gallery</item>
+        <item>com.gathin.tvhome.inputs</item>
+        <item>com.amazon.firetv.troubleshooting</item>
+        <item>com.amazon.spiderpork</item>
+        <item>com.amazon.whasettings</item>
     </string-array>
 
-    <!-- The TV's Live TV / tuner app, offered at the end of the Inputs menu. Leave empty to omit. -->
-    <string name="live_tv_package" translatable="false">com.mediatek.wwtv.tvcenter</string>
+    <!-- No Live TV / tuner app on a Fire Stick. -->
+    <string name="live_tv_package" translatable="false"></string>
 
     <!-- Tiles per row in the grid; the dock always has this many slots. -->
     <integer name="columns">5</integer>
