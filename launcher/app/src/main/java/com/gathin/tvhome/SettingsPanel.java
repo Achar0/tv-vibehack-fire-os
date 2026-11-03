@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.provider.Settings;
-import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewStub;
 import android.widget.TextView;
@@ -157,12 +156,7 @@ final class SettingsPanel {
             if (has && current >= 0) cats[current].setSelected(true);
         };
         // OK sinks the focused row a little on key-down and lifts it back on key-up; the click still fires.
-        View.OnKeyListener pressKeys = (v, keyCode, event) -> {
-            if (!Motion.isSelect(keyCode)) return false;
-            if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) Motion.press(v, true, ROW_SCALE);
-            else if (event.getAction() == KeyEvent.ACTION_UP) Motion.press(v, false, ROW_SCALE);
-            return false;
-        };
+        View.OnKeyListener pressKeys = (v, keyCode, event) -> Motion.handlePress(v, keyCode, event, ROW_SCALE);
         int[] rows = {R.id.rowAdb, R.id.rowFireSettings, R.id.rowWifi, R.id.rowWallpaper, R.id.rowDock, R.id.rowTopBar,
                 R.id.rowLanguage};
         for (int id : rows) {

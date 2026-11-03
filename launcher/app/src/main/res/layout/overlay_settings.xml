@@ -2,6 +2,8 @@
 <!-- Two-pane Settings, inflated from settingsStub on first open (SettingsPanel). -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/settingsOverlay"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#EB080A0E"
@@ -12,6 +14,8 @@
     android:paddingBottom="32dp">
 
     <LinearLayout
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
@@ -37,6 +41,8 @@
             android:textSize="13sp" />
 
         <LinearLayout
+            android:clipChildren="false"
+            android:clipToPadding="false"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
@@ -44,6 +50,8 @@
             android:orientation="horizontal">
 
             <LinearLayout
+                android:clipChildren="false"
+                android:clipToPadding="false"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="0.32"
@@ -68,6 +76,8 @@
             </LinearLayout>
 
             <FrameLayout
+                android:clipChildren="false"
+                android:clipToPadding="false"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="0.68"
@@ -75,6 +85,8 @@
 
                 <LinearLayout
                     android:id="@+id/paneDevice"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
@@ -131,6 +143,8 @@
 
                 <LinearLayout
                     android:id="@+id/paneAppearance"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
@@ -211,6 +225,8 @@
 
                 <LinearLayout
                     android:id="@+id/paneAbout"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"

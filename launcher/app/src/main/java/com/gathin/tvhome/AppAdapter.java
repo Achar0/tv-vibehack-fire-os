@@ -289,14 +289,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
 
             card.setOnKeyListener((view, keyCode, event) -> {
                 // Press-in on OK: the tile sinks on key-down and comes back on key-up (the click still fires).
-                if (Motion.isSelect(keyCode)) {
-                    if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
-                        Motion.press(view, true, FOCUS_SCALE);
-                    } else if (event.getAction() == KeyEvent.ACTION_UP) {
-                        Motion.press(view, false, FOCUS_SCALE);
-                    }
-                    return false;
-                }
+                if (Motion.isSelect(keyCode)) return Motion.handlePress(view, keyCode, event, FOCUS_SCALE);
                 if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
                 if (keyCode != KeyEvent.KEYCODE_DPAD_UP && keyCode != KeyEvent.KEYCODE_DPAD_DOWN) return false;
                 int pos = getBindingAdapterPosition();

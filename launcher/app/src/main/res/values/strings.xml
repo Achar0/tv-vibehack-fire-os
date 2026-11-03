@@ -45,6 +45,7 @@
     <string name="screensaver_name">Clock</string>
     <string name="cant_open">Can\'t open %1$s</string>
     <string name="settings_language">Language</string>
+    <string name="home_date_format">EEEE, d MMMM</string>
     <string name="dream_date_format">EEEE  d MMMM</string>
     <!-- Each language names itself, whatever the current language is. -->
     <string name="lang_en" translatable="false">English</string>

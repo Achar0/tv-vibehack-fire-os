@@ -45,5 +45,6 @@
     <string name="screensaver_name">Orologio</string>
     <string name="cant_open">Impossibile aprire %1$s</string>
     <string name="settings_language">Lingua</string>
+    <string name="home_date_format">EEEE d MMMM</string>
     <string name="dream_date_format">EEEE d MMMM</string>
 </resources>

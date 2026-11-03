@@ -1,6 +1,7 @@
 package com.gathin.tvhome;
 
 import android.animation.ValueAnimator;
+import android.os.SystemClock;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.animation.Interpolator;
@@ -35,8 +36,23 @@ final class Motion {
     /** Degrees a focused tile leans toward the D-pad direction before settling. */
     private static final float TILT_DEG = 4f;
 
-    /** The last D-pad key pressed (MainActivity sets it), so a new focus can lean the way you moved. */
-    static int lastDirection;
+    /** The last D-pad key pressed and when (MainActivity sets them), so a new focus can lean the way you moved. */
+    private static int lastDirection;
+    private static long lastDirectionAt;
+    /** A focus change later than this after the key (Back, a programmatic focus) does not lean. */
+    private static final long DIRECTION_FRESH_MS = 400;
+
+    static void onDirectionKey(int keyCode) {
+        lastDirection = keyCode;
+        lastDirectionAt = SystemClock.uptimeMillis();
+    }
+
+    /** The pending D-pad direction, used once; 0 when there is none or it is stale. */
+    private static int takeDirection() {
+        int d = SystemClock.uptimeMillis() - lastDirectionAt <= DIRECTION_FRESH_MS ? lastDirection : 0;
+        lastDirection = 0;
+        return d;
+    }
 
     /** False when the TV's animation scale is off (accessibility): then values are set directly. */
     static boolean enabled() {
@@ -74,7 +90,7 @@ final class Motion {
         springTo(v, DynamicAnimation.TRANSLATION_Z, R.id.motion_translation_z, focused ? liftPx : 0f, FOCUS);
         if (!focused || !tilt || !enabled()) return;
         float rx = 0f, ry = 0f;
-        switch (lastDirection) {
+        switch (takeDirection()) {
             case KeyEvent.KEYCODE_DPAD_LEFT: ry = TILT_DEG; break;
             case KeyEvent.KEYCODE_DPAD_RIGHT: ry = -TILT_DEG; break;
             case KeyEvent.KEYCODE_DPAD_UP: rx = -TILT_DEG; break;
@@ -106,6 +122,17 @@ final class Motion {
     /** OK pressed / released on a focused view: sink a little, then come back to its focus scale. */
     static void press(View v, boolean down, float focusScale) {
         scaleTo(v, down ? focusScale * 0.945f : focusScale, PRESS);
+    }
+
+    /**
+     * Press-in for any focusable: on OK key-down (first, not repeats) it sinks, on key-up it comes back.
+     * Always returns false so the click still fires. Use as the body of an OnKeyListener.
+     */
+    static boolean handlePress(View v, int keyCode, KeyEvent event, float focusScale) {
+        if (!isSelect(keyCode)) return false;
+        if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) press(v, true, focusScale);
+        else if (event.getAction() == KeyEvent.ACTION_UP) press(v, false, focusScale);
+        return false;
     }
 
     /** True for the OK / Enter keys. */

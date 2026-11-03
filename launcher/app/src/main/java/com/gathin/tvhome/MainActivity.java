@@ -165,22 +165,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         dockSpring = new SpringAnimation(grid, DynamicAnimation.TRANSLATION_Y);
         dockSpring.setSpring(new SpringForce().setStiffness(Motion.DOCK).setDampingRatio(SpringForce.DAMPING_RATIO_NO_BOUNCY));
         dockSpring.addEndListener((anim, canceled, value, velocity) -> {
-            if (canceled || isDockPeeking) return;
-            // Dock fully up: put the glass on the focused tile now that it has stopped moving.
-            RecyclerView.ViewHolder vh = grid.findViewHolderForAdapterPosition(lastFocused);
-            View card = vh != null ? vh.itemView.findViewById(R.id.card) : null;
-            if (card != null && card.isFocused()) onTileFocused(lastFocused, card);
+            if (!canceled) onDockSettled();
         });
 
         View btnSettings = findViewById(R.id.btnSettings);
         btnWifi.setOnClickListener(v -> open(new Intent(Settings.ACTION_WIFI_SETTINGS)));
         settingsPanel = new SettingsPanel(this, findViewById(R.id.settingsStub), this);
         btnSettings.setOnClickListener(v -> settingsPanel.show());
-        if (prefs.getBoolean(REOPEN_LANGUAGE, false)) {
-            prefs.edit().remove(REOPEN_LANGUAGE).apply();
-            // Posted twice so it runs after onResume's first-launch focus (also posted), not before it.
-            grid.post(() -> grid.post(() -> settingsPanel.show(1, R.id.rowLanguage)));
-        }
+        reopenLanguage = prefs.getBoolean(REOPEN_LANGUAGE, false);
+        if (reopenLanguage) prefs.edit().remove(REOPEN_LANGUAGE).apply();
         isTopBarShowText = prefs.getBoolean("top_bar_show_text", true);
         applyTopBarStyle(isTopBarShowText);
 
@@ -190,11 +183,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         btnWifi.setOnFocusChangeListener(pillFocus);
         btnSettings.setOnFocusChangeListener(pillFocus);
         View.OnKeyListener pillKeys = (v, keyCode, event) -> {
-            if (Motion.isSelect(keyCode)) {
-                if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) Motion.press(v, true, PILL_SCALE);
-                else if (event.getAction() == KeyEvent.ACTION_UP) Motion.press(v, false, PILL_SCALE);
-                return false;
-            }
+            if (Motion.isSelect(keyCode)) return Motion.handlePress(v, keyCode, event, PILL_SCALE);
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
             if (keyCode == KeyEvent.KEYCODE_DPAD_UP) return true;
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && v.getId() == R.id.btnWifi) return true;
@@ -229,6 +218,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
     }
 
     private boolean isInitialLaunch = true;
+    /** Just recreated by a language change: open Settings again on the Language row. */
+    private boolean reopenLanguage;
 
     @Override
     protected void onResume() {
@@ -259,6 +250,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
                 View btn = findViewById(R.id.btnWifi);
                 if (btn != null) btn.requestFocus();
                 setDockPeek(true, false);
+                if (reopenLanguage) {
+                    reopenLanguage = false;
+                    settingsPanel.show(1, R.id.rowLanguage);
+                }
             });
         }
     }
@@ -316,7 +311,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
             int k = event.getKeyCode();
             if (k == KeyEvent.KEYCODE_DPAD_UP || k == KeyEvent.KEYCODE_DPAD_DOWN
                     || k == KeyEvent.KEYCODE_DPAD_LEFT || k == KeyEvent.KEYCODE_DPAD_RIGHT) {
-                Motion.lastDirection = k;   // the next focused tile leans this way
+                Motion.onDirectionKey(k);   // the next focused tile leans this way
             }
         }
         if (trapFocusInOverlay(event)) return true;
@@ -345,6 +340,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         }
     }
 
+    /** Dock fully up: put the glass on the focused tile now that it has stopped moving. */
+    private void onDockSettled() {
+        if (isDockPeeking) return;
+        RecyclerView.ViewHolder vh = grid.findViewHolderForAdapterPosition(lastFocused);
+        View card = vh != null ? vh.itemView.findViewById(R.id.card) : null;
+        if (card != null && card.isFocused()) onTileFocused(lastFocused, card);
+    }
+
     private void setDockPeek(boolean peek, boolean animate) {
         if (isDockPeeking == peek && !dockSpring.isRunning()) return;
         isDockPeeking = peek;
@@ -355,6 +358,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         if (!animate || !Motion.enabled()) {
             dockSpring.cancel();
             grid.setTranslationY(targetY);
+            onDockSettled();
             return;
         }
         if (!dockSpring.isRunning() && Math.abs(grid.getTranslationY() - targetY) < 1f) return;
