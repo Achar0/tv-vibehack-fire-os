@@ -27,7 +27,7 @@ Device: Fire TV Stick 4K 2nd gen (AFTKM), Fire OS 8.1.8.2, Android 11
 3. **Calendar removed.** The pill, overlay layout, `showCalendar`/`renderCalendar` code and its strings are deleted, not hidden. The top bar keeps Wi-Fi and Settings.
 4. **Optimization.**
    - Release build with R8 code and resource shrinking (`minifyEnabled true`, `shrinkResources true`), signed with the same debug key as now so it installs over the current app. Target APK < 1 MB (now ~6 MB debug, 3.8 MB of it unused library code).
-   - Remove dead code: calendar, unregistered `ClockDream` (unless the screensaver question below keeps it), and the Stremio shelf, which never shows on this TV.
+   - Remove dead code: calendar and the Stremio shelf, which never shows on this TV. `ClockDream` is kept and turned on (see Screensaver).
    - Settings overlay inflated on first open (ViewStub), not at startup.
    - No work while Home is hidden: the minute tick already stops in `onPause`; audit every `Handler`/animator for the same.
    - Wallpapers: one decoded at a time, at screen size; recompress if it saves size with no visible loss.
@@ -66,6 +66,9 @@ Device: Fire TV Stick 4K 2nd gen (AFTKM), Fire OS 8.1.8.2, Android 11
 - Whether Appearance rows cycle on OK or open a small choice list (pick whichever needs fewer presses).
 - Keep rules for R8 (manifest components are kept automatically).
 
-## Open questions for the owner
+## Screensaver (owner: "I don't want the Amazon one")
 
-- **Screensaver:** Fire OS shows Amazon's screensaver when idle, then sleeps. The launcher already contains an unused clock screensaver (`ClockDream`: clock and date drifting on black, no images, no network). Use it instead of Amazon's, or leave Amazon's alone and delete `ClockDream`?
+- Register the existing, unused `ClockDream` (clock and date drifting on black over a slow glow, no images, no network) as a `DreamService` in the manifest, with `BIND_DREAM_SERVICE`.
+- Make it the system screensaver over ADB: `settings put secure screensaver_components com.gathin.tvhome/.ClockDream` and `screensaver_enabled 1`. Fire OS's own sleep timer stays as it is: clock screensaver first, then sleep.
+- Its strings go to `strings.xml`. The glow moves once a minute, with no per-frame work.
+- **Risk:** Fire OS may ignore the standard screensaver setting and keep starting Amazon's (`com.amazon.ftv.screensaver`). Verify on the TV by forcing it (`am start -n com.android.systemui/.Somnambulator` or waiting for idle). If Fire OS ignores it, disable Amazon's screensaver package so the TV just goes black, then sleeps. That's reversible with `pm enable`, and goes in the debloat notes.
