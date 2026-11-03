@@ -48,6 +48,11 @@ public class TvAccessibilityService extends AccessibilityService {
         letThroughUntil = SystemClock.uptimeMillis() + LET_THROUGH_MAX_MS;
     }
 
+    /** The start that armed letAmazonHomeThrough() failed: redirect Amazon's home again right away. */
+    static void cancelAmazonHomeThrough() {
+        letThroughUntil = 0;
+    }
+
     private static boolean lettingThrough() {
         return SystemClock.uptimeMillis() < letThroughUntil;
     }

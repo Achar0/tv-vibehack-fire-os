@@ -47,12 +47,10 @@ import androidx.dynamicanimation.animation.SpringForce;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * tvOS style home: black, a pinned dock row, an app grid, and one glass highlight that springs between tiles.
@@ -254,7 +252,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         return null;
     }
 
-    private static boolean isInside(View parent, View v) {
+    static boolean isInside(View parent, View v) {
         for (View p = v; p != null; p = (p.getParent() instanceof View) ? (View) p.getParent() : null) {
             if (p == parent) return true;
         }
@@ -582,6 +580,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
             startActivity(i);
             return true;
         } catch (ActivityNotFoundException | SecurityException e) {
+            TvAccessibilityService.cancelAmazonHomeThrough();
             return false;
         }
     }
@@ -732,11 +731,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
     @Override
     public String wallpaperTheme() {
         return getSharedPreferences("tvhome_prefs", MODE_PRIVATE).getString("wallpaper_theme", "auto");
-    }
-
-    @Override
-    public void openSystem(Intent intent) {
-        open(intent);
     }
 
     @Override

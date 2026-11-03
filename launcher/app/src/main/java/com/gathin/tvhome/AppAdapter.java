@@ -178,9 +178,12 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             if ("com.gathin.tvhome.inputs".equals(e.pkg)) return true;
             Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + e.pkg));
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            // Fire OS opens app info via Amazon's home; let the Home override pass it once.
+            TvAccessibilityService.letAmazonHomeThrough();
             try {
                 ctx.startActivity(i);
-            } catch (ActivityNotFoundException ignored) {
+            } catch (ActivityNotFoundException | SecurityException ignored) {
+                TvAccessibilityService.cancelAmazonHomeThrough();
             }
             return true;
         });

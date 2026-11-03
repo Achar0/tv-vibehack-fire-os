@@ -26,7 +26,6 @@ final class SettingsPanel {
         void setPeekDepth(String depth);
         String wallpaperTheme();
         void setWallpaperTheme(String theme);
-        void openSystem(Intent intent);
         /** Starts the screen if it exists; false (and no message) when it can't be opened. */
         boolean tryOpenSystem(Intent intent);
     }
@@ -97,7 +96,7 @@ final class SettingsPanel {
     boolean onBack() {
         if (!showing) return false;
         View f = activity.getCurrentFocus();
-        if (current >= 0 && f != null && isInside(panes[current], f)) {
+        if (current >= 0 && f != null && MainActivity.isInside(panes[current], f)) {
             cats[current].requestFocus();
         } else {
             hide(true);
@@ -136,8 +135,8 @@ final class SettingsPanel {
         for (int id : rows) find(id).setOnFocusChangeListener(rowFocus);
 
         find(R.id.rowAdb).setOnClickListener(v -> toggleAdb());
-        find(R.id.rowFireSettings).setOnClickListener(v -> host.openSystem(new Intent(Settings.ACTION_SETTINGS)));
-        find(R.id.rowWifi).setOnClickListener(v -> host.openSystem(new Intent(Settings.ACTION_WIFI_SETTINGS)));
+        find(R.id.rowFireSettings).setOnClickListener(v -> openOrSay(new Intent(Settings.ACTION_SETTINGS)));
+        find(R.id.rowWifi).setOnClickListener(v -> openOrSay(new Intent(Settings.ACTION_WIFI_SETTINGS)));
         find(R.id.rowWallpaper).setOnClickListener(v -> {
             host.setWallpaperTheme(Choices.next(WALLPAPERS, host.wallpaperTheme()));
             refreshValues();
@@ -162,11 +161,11 @@ final class SettingsPanel {
 
     /** Flips ADB when allowed; otherwise opens Developer Options. The badge always shows the re-read state. */
     private void toggleAdb() {
-        if (AdbSwitch.canWrite(activity)) {
-            AdbSwitch.set(activity, !AdbSwitch.isEnabled(activity));
+        if (AdbSwitch.canWrite(activity) && AdbSwitch.set(activity, !AdbSwitch.isEnabled(activity))) {
             refreshAdb();
             return;
         }
+        refreshAdb();   // a refused write leaves the real state on the badge, then falls back below
         if (!adbHintShown) {
             adbHintShown = true;
             Toast.makeText(activity, R.string.adb_no_permission_toast, Toast.LENGTH_LONG).show();
@@ -179,6 +178,10 @@ final class SettingsPanel {
 
     private void refreshAdb() {
         adbState.setText(AdbSwitch.isEnabled(activity) ? R.string.adb_on : R.string.adb_off);
+    }
+
+    private void openOrSay(Intent i) {
+        if (!host.tryOpenSystem(i)) Toast.makeText(activity, R.string.not_available, Toast.LENGTH_SHORT).show();
     }
 
     private void enterPane(int idx) {
@@ -219,21 +222,11 @@ final class SettingsPanel {
 
     /** The label for {@code value}, the first one when the value is unknown. */
     private String label(String value, String[] order, int[] labels) {
-        for (int i = 0; i < order.length; i++) {
-            if (order[i].equals(value)) return activity.getString(labels[i]);
-        }
-        return activity.getString(labels[0]);
+        return activity.getString(labels[Choices.indexOf(order, value)]);
     }
 
     @SuppressWarnings("unchecked")
     private <T extends View> T find(int id) {
         return (T) root.findViewById(id);
-    }
-
-    private static boolean isInside(View parent, View v) {
-        for (View p = v; p != null; p = p.getParent() instanceof View ? (View) p.getParent() : null) {
-            if (p == parent) return true;
-        }
-        return false;
     }
 }

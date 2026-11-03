@@ -16,4 +16,5 @@
     <string name="good_night">Gute Nacht</string>
     <string name="ethernet">LAN</string>
     <string name="offline">Offline</string>
+    <string name="not_available">Auf diesem TV nicht verfügbar</string>
 </resources>

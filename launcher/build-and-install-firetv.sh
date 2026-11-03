@@ -25,8 +25,8 @@ adb -s "$T" shell pm grant com.gathin.tvhome android.permission.ACCESS_FINE_LOCA
 # Settings > Device > ADB debugging switches ADB itself with this; without it the row opens Developer Options.
 adb -s "$T" shell pm grant com.gathin.tvhome android.permission.WRITE_SECURE_SETTINGS || true
 # The launcher's clock screensaver instead of Amazon's (Fire OS's own sleep timer still applies after it).
-adb -s "$T" shell settings put secure screensaver_components com.gathin.tvhome/.ClockDream
-adb -s "$T" shell settings put secure screensaver_enabled 1
+adb -s "$T" shell settings put secure screensaver_components com.gathin.tvhome/.ClockDream || true
+adb -s "$T" shell settings put secure screensaver_enabled 1 || true
 # Reinstalling unbinds the service, and writing the same value back doesn't rebind it,
 # so clear the setting first to force a fresh bind.
 adb -s "$T" shell settings delete secure enabled_accessibility_services >/dev/null

@@ -11,4 +11,7 @@ public class ChoicesTest {
     @Test public void nextWrapsAround() { assertEquals("auto", Choices.next(WALL, "night")); }
     @Test public void unknownValueStartsAtFirst() { assertEquals("auto", Choices.next(WALL, "bogus")); }
     @Test public void nullValueStartsAtFirst() { assertEquals("auto", Choices.next(WALL, null)); }
+    @Test public void indexOfFindsValue() { assertEquals(2, Choices.indexOf(WALL, "night")); }
+    @Test public void indexOfUnknownIsFirst() { assertEquals(0, Choices.indexOf(WALL, "bogus")); }
+    @Test public void indexOfNullIsFirst() { assertEquals(0, Choices.indexOf(WALL, null)); }
 }
