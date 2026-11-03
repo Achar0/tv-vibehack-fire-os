@@ -19,7 +19,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
-import android.view.animation.OvershootInterpolator;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -67,6 +66,8 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
     }
 
     static final float FOCUS_SCALE = 1.10f;
+    /** Shadow depth of a focused tile. */
+    static final float LIFT_DP = 10f;
 
     private final Context ctx;
     private final TileListener listener;
@@ -101,7 +102,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             fresh.add(new Entry(label, new ComponentName(pkg, ri.activityInfo.name), banner, icon));
         }
         // TVs without HDMI/tuner inputs (e.g. streaming sticks) can hide this tile via hidden_apps.
-        if (!hidden.contains("com.gathin.tvhome.inputs")) fresh.add(new Entry("Inputs", new ComponentName("com.gathin.tvhome.inputs", "InputsActivity"),
+        if (!hidden.contains("com.gathin.tvhome.inputs")) fresh.add(new Entry(ctx.getString(R.string.inputs), new ComponentName("com.gathin.tvhome.inputs", "InputsActivity"),
                 ctx.getDrawable(R.drawable.banner_inputs), ctx.getDrawable(R.drawable.ic_input)));
 
         // Row 0: Dock Core Apps
@@ -152,8 +153,8 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         h.name.setTranslationY(focused ? 0f : -density * 4f);
         h.name.setScaleX(focused ? 1.04f : 1.0f);
         h.name.setScaleY(focused ? 1.04f : 1.0f);
-        h.card.setScaleX(focused ? FOCUS_SCALE : 1f);
-        h.card.setScaleY(focused ? FOCUS_SCALE : 1f);
+        Motion.reset(h.card, focused ? FOCUS_SCALE : 1f);
+        if (focused) h.card.setTranslationZ(LIFT_DP * density);
         if (e.banner != null) {
             h.banner.setImageDrawable(e.banner);
             h.banner.setVisibility(View.VISIBLE);
@@ -197,7 +198,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         try {
             ctx.startActivity(i);
         } catch (Exception ex) {
-            Toast.makeText(ctx, "Can't open " + e.label, Toast.LENGTH_SHORT).show();
+            Toast.makeText(ctx, ctx.getString(R.string.cant_open, e.label), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -287,6 +288,15 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             card.setClipToOutline(true);
 
             card.setOnKeyListener((view, keyCode, event) -> {
+                // Press-in on OK: the tile sinks on key-down and comes back on key-up (the click still fires).
+                if (Motion.isSelect(keyCode)) {
+                    if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
+                        Motion.press(view, true, FOCUS_SCALE);
+                    } else if (event.getAction() == KeyEvent.ACTION_UP) {
+                        Motion.press(view, false, FOCUS_SCALE);
+                    }
+                    return false;
+                }
                 if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
                 if (keyCode != KeyEvent.KEYCODE_DPAD_UP && keyCode != KeyEvent.KEYCODE_DPAD_DOWN) return false;
                 int pos = getBindingAdapterPosition();
@@ -294,11 +304,8 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             });
 
             card.setOnFocusChangeListener((view, focused) -> {
-                float s = focused ? FOCUS_SCALE : 1.0f;
-                view.animate().scaleX(s).scaleY(s)
-                        .setDuration(focused ? 260 : 180)
-                        .setInterpolator(new OvershootInterpolator(focused ? 1.6f : 0f))
-                        .start();
+                // tvOS lift: critically damped spring, deeper shadow, a lean toward the D-pad direction.
+                Motion.focus(view, focused, FOCUS_SCALE, LIFT_DP * density, true);
                 name.animate()
                         .alpha(focused ? 1.0f : 0.0f)
                         .translationY(focused ? 0f : -density * 4f)

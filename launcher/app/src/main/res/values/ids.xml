@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- View tags holding each view's running springs (Motion), so a new target re-uses them. -->
+    <item name="motion_scale_x" type="id" />
+    <item name="motion_scale_y" type="id" />
+    <item name="motion_rotation_x" type="id" />
+    <item name="motion_rotation_y" type="id" />
+    <item name="motion_translation_z" type="id" />
+</resources>

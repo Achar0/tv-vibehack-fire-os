@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.provider.Settings;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewStub;
 import android.widget.TextView;
@@ -28,13 +29,20 @@ final class SettingsPanel {
         void setWallpaperTheme(String theme);
         /** Starts the screen if it exists; false (and no message) when it can't be opened. */
         boolean tryOpenSystem(Intent intent);
+        String language();
+        /** Saves the launcher language and rebuilds the screen in it. */
+        void setLanguage(String code);
     }
 
     static final String[] WALLPAPERS = {"auto", "day", "night"};
     static final String[] DOCKS = {"ultra", "balanced", "none"};
     static final String[] TOP_BARS = {"text", "icon"};
 
-    private static final long IN_MS = 220, OUT_MS = 180;
+    private static final long IN_MS = 220, OUT_MS = 160;
+    /** Focused row / category: a small lift, like tvOS lists. */
+    private static final float ROW_SCALE = 1.03f, ROW_LIFT_DP = 6f;
+    /** The panel arrives from slightly smaller, so it reads as a surface rather than a fade. */
+    private static final float PANEL_FROM_SCALE = 0.98f;
 
     private final Activity activity;
     private final ViewStub stub;
@@ -45,7 +53,7 @@ final class SettingsPanel {
     private View[] panes;
     /** First row of each pane (About has none). */
     private View[] firstRows;
-    private TextView valWallpaper, valDock, valTopBar, adbState;
+    private TextView valWallpaper, valDock, valTopBar, valLanguage, adbState;
     /** The no-permission hint is shown once per launcher run. */
     private boolean adbHintShown;
     private int current = -1;
@@ -63,17 +71,30 @@ final class SettingsPanel {
     View root() { return root; }
 
     void show() {
+        show(0, 0);
+    }
+
+    /** Opens on category {@code cat}, focusing row {@code rowId} when non-zero (after a language change). */
+    void show(int cat, int rowId) {
         if (root == null) inflate();
         showing = true;
         refreshValues();
         root.animate().cancel();
         root.setAlpha(0f);
+        root.setScaleX(PANEL_FROM_SCALE);
+        root.setScaleY(PANEL_FROM_SCALE);
         root.setVisibility(View.VISIBLE);
-        root.animate().alpha(1f).setDuration(IN_MS).start();
+        root.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(IN_MS).setInterpolator(Motion.EASE_OUT).start();
         current = -1;   // always reset the pane fully, even after a hide mid-animation
         for (View c : cats) c.setSelected(false);
-        selectCategory(0, false);
-        cats[0].requestFocus();
+        selectCategory(cat, false);
+        View row = rowId != 0 ? root.findViewById(rowId) : null;
+        if (row != null) {
+            cats[cat].setSelected(true);
+            row.requestFocus();
+        } else {
+            cats[cat].requestFocus();
+        }
     }
 
     /** Re-reads live values (ADB can change in Amazon's settings while the panel is open). */
@@ -89,7 +110,8 @@ final class SettingsPanel {
             root.setVisibility(View.GONE);
             return;
         }
-        root.animate().alpha(0f).setDuration(OUT_MS).withEndAction(() -> root.setVisibility(View.GONE)).start();
+        root.animate().alpha(0f).scaleX(PANEL_FROM_SCALE).scaleY(PANEL_FROM_SCALE).setDuration(OUT_MS)
+                .withEndAction(() -> root.setVisibility(View.GONE)).start();
     }
 
     /** Back: from a row to its category, from a category out of Settings. Returns true if consumed. */
@@ -112,11 +134,13 @@ final class SettingsPanel {
         valWallpaper = find(R.id.valWallpaper);
         valDock = find(R.id.valDock);
         valTopBar = find(R.id.valTopBar);
+        valLanguage = find(R.id.valLanguage);
         adbState = find(R.id.adbState);
 
         for (int i = 0; i < cats.length; i++) {
             final int idx = i;
             cats[i].setOnFocusChangeListener((v, has) -> {
+                Motion.focus(v, has, ROW_SCALE, liftPx(), false);
                 if (!has) return;
                 for (View c : cats) c.setSelected(false);
                 selectCategory(idx, true);
@@ -129,10 +153,23 @@ final class SettingsPanel {
 
         // While focus is in a pane, its category stays highlighted so you can see where you are.
         View.OnFocusChangeListener rowFocus = (v, has) -> {
+            Motion.focus(v, has, ROW_SCALE, liftPx(), false);
             if (has && current >= 0) cats[current].setSelected(true);
         };
-        int[] rows = {R.id.rowAdb, R.id.rowFireSettings, R.id.rowWifi, R.id.rowWallpaper, R.id.rowDock, R.id.rowTopBar};
-        for (int id : rows) find(id).setOnFocusChangeListener(rowFocus);
+        // OK sinks the focused row a little on key-down and lifts it back on key-up; the click still fires.
+        View.OnKeyListener pressKeys = (v, keyCode, event) -> {
+            if (!Motion.isSelect(keyCode)) return false;
+            if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) Motion.press(v, true, ROW_SCALE);
+            else if (event.getAction() == KeyEvent.ACTION_UP) Motion.press(v, false, ROW_SCALE);
+            return false;
+        };
+        int[] rows = {R.id.rowAdb, R.id.rowFireSettings, R.id.rowWifi, R.id.rowWallpaper, R.id.rowDock, R.id.rowTopBar,
+                R.id.rowLanguage};
+        for (int id : rows) {
+            find(id).setOnFocusChangeListener(rowFocus);
+            find(id).setOnKeyListener(pressKeys);
+        }
+        for (View c : cats) c.setOnKeyListener(pressKeys);
 
         find(R.id.rowAdb).setOnClickListener(v -> toggleAdb());
         find(R.id.rowFireSettings).setOnClickListener(v -> openOrSay(new Intent(Settings.ACTION_SETTINGS)));
@@ -145,6 +182,8 @@ final class SettingsPanel {
             host.setPeekDepth(Choices.next(DOCKS, host.peekDepth()));
             refreshValues();
         });
+        find(R.id.rowLanguage).setOnClickListener(v ->
+                host.setLanguage(Choices.next(LauncherLocale.CODES, host.language())));
         find(R.id.rowTopBar).setOnClickListener(v -> {
             String next = Choices.next(TOP_BARS, host.topBarShowsText() ? "text" : "icon");
             host.setTopBarStyle("text".equals(next));
@@ -191,6 +230,7 @@ final class SettingsPanel {
     /** Shows pane {@code idx}: a short fade and slide in, the others hidden. */
     private void selectCategory(int idx, boolean animate) {
         if (idx == current) return;
+        float from = (idx > current ? 1 : -1) * 24f * activity.getResources().getDisplayMetrics().density;
         current = idx;
         for (int i = 0; i < panes.length; i++) {
             View p = panes[i];
@@ -202,11 +242,11 @@ final class SettingsPanel {
             p.setVisibility(View.VISIBLE);
             if (animate) {
                 p.setAlpha(0f);
-                p.setTranslationX(24f * activity.getResources().getDisplayMetrics().density);
-                p.animate().alpha(1f).translationX(0f).setDuration(IN_MS).start();
+                p.setTranslationY(from);
+                p.animate().alpha(1f).translationY(0f).setDuration(IN_MS).setInterpolator(Motion.EASE_OUT).start();
             } else {
                 p.setAlpha(1f);
-                p.setTranslationX(0f);
+                p.setTranslationY(0f);
             }
         }
     }
@@ -218,11 +258,17 @@ final class SettingsPanel {
         valDock.setText(label(host.peekDepth(), DOCKS, new int[]{
                 R.string.settings_peek_ultra, R.string.settings_peek_balanced, R.string.settings_peek_none}));
         valTopBar.setText(host.topBarShowsText() ? R.string.settings_top_bar_text : R.string.settings_top_bar_icon);
+        valLanguage.setText(label(host.language(), LauncherLocale.CODES, new int[]{
+                R.string.lang_en, R.string.lang_it, R.string.lang_zh}));
     }
 
     /** The label for {@code value}, the first one when the value is unknown. */
     private String label(String value, String[] order, int[] labels) {
         return activity.getString(labels[Choices.indexOf(order, value)]);
+    }
+
+    private float liftPx() {
+        return ROW_LIFT_DP * activity.getResources().getDisplayMetrics().density;
     }
 
     @SuppressWarnings("unchecked")

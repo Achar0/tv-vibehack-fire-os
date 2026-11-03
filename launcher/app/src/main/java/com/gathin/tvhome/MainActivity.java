@@ -1,8 +1,5 @@
 package com.gathin.tvhome;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
-import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -30,9 +27,7 @@ import android.view.View;
 import android.view.FocusFinder;
 import android.view.ViewGroup;
 import android.view.animation.AnimationUtils;
-import android.view.animation.DecelerateInterpolator;
 import android.view.animation.LayoutAnimationController;
-import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -60,6 +55,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
     /** Tiles per row and dock slots (res/values/config.xml, columns). Set in onCreate. */
     static int COLUMNS = 4;
     private static final long MINUTE_MS = 60_000L;
+    /** Focus scale of the top-bar pills. */
+    private static final float PILL_SCALE = 1.06f;
+    /** Set by setLanguage(): after recreate(), open Settings again on the Language row. */
+    private static final String REOPEN_LANGUAGE = "reopen_settings_language";
     private String liveTvPkg;
 
     private AppAdapter adapter;
@@ -76,7 +75,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
     private ImageView wallpaper;
     private int currentWallpaperRes = 0;
     private boolean isDockPeeking = false;
-    private ValueAnimator dockPeekAnimator;
+    /** The dock's vertical position; a spring, so a reversed Up/Down continues from where it is. */
+    private SpringAnimation dockSpring;
     private float peekOffset;
     private String peekDepthPref = "ultra";
     private boolean isTopBarShowText = true;
@@ -159,19 +159,42 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         springX = new SpringAnimation(glass, DynamicAnimation.TRANSLATION_X);
         springY = new SpringAnimation(glass, DynamicAnimation.TRANSLATION_Y);
         for (SpringAnimation s : new SpringAnimation[]{springX, springY}) {
-            s.setSpring(new SpringForce().setStiffness(360f).setDampingRatio(SpringForce.DAMPING_RATIO_NO_BOUNCY));
+            s.setSpring(new SpringForce().setStiffness(600f).setDampingRatio(SpringForce.DAMPING_RATIO_NO_BOUNCY));
         }
+
+        dockSpring = new SpringAnimation(grid, DynamicAnimation.TRANSLATION_Y);
+        dockSpring.setSpring(new SpringForce().setStiffness(Motion.DOCK).setDampingRatio(SpringForce.DAMPING_RATIO_NO_BOUNCY));
+        dockSpring.addEndListener((anim, canceled, value, velocity) -> {
+            if (canceled || isDockPeeking) return;
+            // Dock fully up: put the glass on the focused tile now that it has stopped moving.
+            RecyclerView.ViewHolder vh = grid.findViewHolderForAdapterPosition(lastFocused);
+            View card = vh != null ? vh.itemView.findViewById(R.id.card) : null;
+            if (card != null && card.isFocused()) onTileFocused(lastFocused, card);
+        });
 
         View btnSettings = findViewById(R.id.btnSettings);
         btnWifi.setOnClickListener(v -> open(new Intent(Settings.ACTION_WIFI_SETTINGS)));
         settingsPanel = new SettingsPanel(this, findViewById(R.id.settingsStub), this);
         btnSettings.setOnClickListener(v -> settingsPanel.show());
+        if (prefs.getBoolean(REOPEN_LANGUAGE, false)) {
+            prefs.edit().remove(REOPEN_LANGUAGE).apply();
+            // Posted twice so it runs after onResume's first-launch focus (also posted), not before it.
+            grid.post(() -> grid.post(() -> settingsPanel.show(1, R.id.rowLanguage)));
+        }
         isTopBarShowText = prefs.getBoolean("top_bar_show_text", true);
         applyTopBarStyle(isTopBarShowText);
 
         // Keep focus on the top bar at its ends and at the top: Android's focus finder would otherwise
         // jump to a tile far below when there is nothing in that direction.
+        View.OnFocusChangeListener pillFocus = (v, has) -> Motion.focus(v, has, PILL_SCALE, 0f, false);
+        btnWifi.setOnFocusChangeListener(pillFocus);
+        btnSettings.setOnFocusChangeListener(pillFocus);
         View.OnKeyListener pillKeys = (v, keyCode, event) -> {
+            if (Motion.isSelect(keyCode)) {
+                if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) Motion.press(v, true, PILL_SCALE);
+                else if (event.getAction() == KeyEvent.ACTION_UP) Motion.press(v, false, PILL_SCALE);
+                return false;
+            }
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
             if (keyCode == KeyEvent.KEYCODE_DPAD_UP) return true;
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && v.getId() == R.id.btnWifi) return true;
@@ -289,6 +312,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getAction() == KeyEvent.ACTION_DOWN) {
+            int k = event.getKeyCode();
+            if (k == KeyEvent.KEYCODE_DPAD_UP || k == KeyEvent.KEYCODE_DPAD_DOWN
+                    || k == KeyEvent.KEYCODE_DPAD_LEFT || k == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                Motion.lastDirection = k;   // the next focused tile leans this way
+            }
+        }
         if (trapFocusInOverlay(event)) return true;
         return super.dispatchKeyEvent(event);
     }
@@ -316,48 +346,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
     }
 
     private void setDockPeek(boolean peek, boolean animate) {
-        if (isDockPeeking == peek && dockPeekAnimator == null) return;
+        if (isDockPeeking == peek && !dockSpring.isRunning()) return;
         isDockPeeking = peek;
         final float targetY = peek ? peekOffset : 0f;
         if (peek) {
             grid.scrollToPosition(0);
         }
-
-        if (dockPeekAnimator != null) {
-            dockPeekAnimator.cancel();
-            dockPeekAnimator = null;
-        }
-
-        if (!animate) {
+        if (!animate || !Motion.enabled()) {
+            dockSpring.cancel();
             grid.setTranslationY(targetY);
             return;
         }
-
-        final float startY = grid.getTranslationY();
-        if (Math.abs(startY - targetY) < 1f) return;
-
-        dockPeekAnimator = ValueAnimator.ofFloat(startY, targetY);
-        dockPeekAnimator.setDuration(peek ? 240 : 260);
-        dockPeekAnimator.setInterpolator(new DecelerateInterpolator(1.8f));
-        dockPeekAnimator.addUpdateListener(anim -> {
-            grid.setTranslationY((float) anim.getAnimatedValue());
-        });
-        dockPeekAnimator.addListener(new AnimatorListenerAdapter() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                dockPeekAnimator = null;
-                if (!isDockPeeking) {
-                    RecyclerView.ViewHolder vh = grid.findViewHolderForAdapterPosition(lastFocused);
-                    if (vh != null) {
-                        View card = vh.itemView.findViewById(R.id.card);
-                        if (card != null && card.isFocused()) {
-                            onTileFocused(lastFocused, card);
-                        }
-                    }
-                }
-            }
-        });
-        dockPeekAnimator.start();
+        if (!dockSpring.isRunning() && Math.abs(grid.getTranslationY() - targetY) < 1f) return;
+        dockSpring.animateToFinalPosition(targetY);
     }
 
     // ---- glass highlight -------------------------------------------------------------------------
@@ -736,6 +737,24 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
     @Override
     public boolean tryOpenSystem(Intent intent) {
         return tryOpen(intent);
+    }
+
+    @Override
+    public String language() {
+        return LauncherLocale.current(this);
+    }
+
+    @Override
+    public void setLanguage(String code) {
+        LauncherLocale.save(this, code);
+        // Rebuild in the new language and come back to the Language row, so it is clear what changed.
+        getSharedPreferences("tvhome_prefs", MODE_PRIVATE).edit().putBoolean(REOPEN_LANGUAGE, true).apply();
+        recreate();
+    }
+
+    @Override
+    protected void attachBaseContext(android.content.Context base) {
+        super.attachBaseContext(LauncherLocale.wrap(base));
     }
 
     @Override

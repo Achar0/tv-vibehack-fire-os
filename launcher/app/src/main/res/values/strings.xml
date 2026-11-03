@@ -23,7 +23,6 @@
     <string name="settings_cat_appearance">Appearance</string>
     <string name="settings_cat_about">About</string>
     <string name="settings_adb">ADB debugging</string>
-    <string name="settings_adb_desc">Remote control from a computer</string>
     <string name="adb_on">On</string>
     <string name="adb_off">Off</string>
     <string name="adb_no_permission_toast">Opening Developer Options. Grant the switch permission over ADB to toggle it here.</string>
@@ -44,4 +43,11 @@
     <string name="settings_about_version">Launcher version %1$s</string>
     <string name="settings_about_desc">tv-vibehack launcher, Fire TV build</string>
     <string name="screensaver_name">Clock</string>
+    <string name="cant_open">Can\'t open %1$s</string>
+    <string name="settings_language">Language</string>
+    <string name="dream_date_format">EEEE  d MMMM</string>
+    <!-- Each language names itself, whatever the current language is. -->
+    <string name="lang_en" translatable="false">English</string>
+    <string name="lang_it" translatable="false">Italiano</string>
+    <string name="lang_zh" translatable="false">中文</string>
 </resources>

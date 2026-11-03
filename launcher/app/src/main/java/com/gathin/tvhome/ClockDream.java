@@ -34,6 +34,12 @@ public class ClockDream extends DreamService {
         }
     };
 
+    /** The launcher's language (Settings > Appearance > Language) for the date line too. */
+    @Override
+    protected void attachBaseContext(android.content.Context base) {
+        super.attachBaseContext(LauncherLocale.wrap(base));
+    }
+
     @Override
     public void onAttachedToWindow() {
         super.onAttachedToWindow();

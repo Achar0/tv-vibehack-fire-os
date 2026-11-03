@@ -170,7 +170,6 @@
                     <LinearLayout
                         android:id="@+id/rowTopBar"
                         style="@style/SettingsRow"
-                        android:nextFocusDown="@id/rowTopBar"
                         android:nextFocusLeft="@id/catAppearance"
                         android:nextFocusRight="@id/rowTopBar">
 
@@ -180,6 +179,22 @@
 
                         <TextView
                             android:id="@+id/valTopBar"
+                            style="@style/SettingsRowValue" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/rowLanguage"
+                        style="@style/SettingsRow"
+                        android:nextFocusDown="@id/rowLanguage"
+                        android:nextFocusLeft="@id/catAppearance"
+                        android:nextFocusRight="@id/rowLanguage">
+
+                        <TextView
+                            style="@style/SettingsRowLabel"
+                            android:text="@string/settings_language" />
+
+                        <TextView
+                            android:id="@+id/valLanguage"
                             style="@style/SettingsRowValue" />
                     </LinearLayout>
 

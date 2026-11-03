@@ -72,3 +72,10 @@ Device: Fire TV Stick 4K 2nd gen (AFTKM), Fire OS 8.1.8.2, Android 11
 - Make it the system screensaver over ADB: `settings put secure screensaver_components com.gathin.tvhome/.ClockDream` and `screensaver_enabled 1`. Fire OS's own sleep timer stays as it is: clock screensaver first, then sleep.
 - Its strings go to `strings.xml`. The glow moves once a minute, with no per-frame work.
 - **Risk:** Fire OS may ignore the standard screensaver setting and keep starting Amazon's (`com.amazon.ftv.screensaver`). Verify on the TV by forcing it (`am start -n com.android.systemui/.Somnambulator` or waiting for idle). If Fire OS ignores it, disable Amazon's screensaver package so the TV just goes black, then sleeps. That's reversible with `pm enable`, and goes in the debloat notes.
+
+## Added after approval (2026-11-03)
+
+- **Apple TV feel** (approved on the preview page): critically damped springs for focus (~0.22 s), a 4° lean toward the D-pad direction that settles flat, deeper shadow on focus, press-in on OK, dock on a spring, Settings rows plain until focused, the panel materializes (scale 0.98 → 1 + fade, 220 ms in / 160 ms out), panes slide from the direction of travel. All motion respects the TV's animation scale (off = no motion).
+- **Language** (Settings > Appearance > Language): English, Italiano, 中文, independent of the TV's language; until chosen it follows the TV if that is one of the three. Screensaver date follows it.
+- **Screensaver fallback:** if Fire OS refuses or ignores `screensaver_components`, keep Amazon's screensaver (owner's call), revert the setting, and don't disable Amazon's package.
+- **Open risk:** Chinese needs a CJK system font; check `/system/fonts` in the device session.
