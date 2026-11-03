@@ -37,8 +37,6 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
-import android.widget.TableLayout;
-import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -53,10 +51,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 /**
  * tvOS style home: black, a pinned dock row, an app grid, and one glass highlight that springs between tiles.
@@ -171,9 +167,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             s.setSpring(new SpringForce().setStiffness(360f).setDampingRatio(SpringForce.DAMPING_RATIO_NO_BOUNCY));
         }
 
-        View btnCalendar = findViewById(R.id.btnCalendar);
         View btnSettings = findViewById(R.id.btnSettings);
-        btnCalendar.setOnClickListener(v -> showCalendar());
         btnWifi.setOnClickListener(v -> open(new Intent(Settings.ACTION_WIFI_SETTINGS)));
         btnSettings.setOnClickListener(v -> showSettings());
         isTopBarShowText = prefs.getBoolean("top_bar_show_text", true);
@@ -184,7 +178,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         View.OnKeyListener pillKeys = (v, keyCode, event) -> {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
             if (keyCode == KeyEvent.KEYCODE_DPAD_UP) return true;
-            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && v.getId() == R.id.btnCalendar) return true;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && v.getId() == R.id.btnWifi) return true;
             if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == R.id.btnSettings) return true;
             if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
                 setDockPeek(false, true);
@@ -194,7 +188,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
             return false;
         };
-        btnCalendar.setOnKeyListener(pillKeys);
         btnWifi.setOnKeyListener(pillKeys);
         btnSettings.setOnKeyListener(pillKeys);
 
@@ -243,7 +236,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (isInitialLaunch) {
             isInitialLaunch = false;
             grid.post(() -> {
-                View btn = findViewById(R.id.btnCalendar);
+                View btn = findViewById(R.id.btnWifi);
                 if (btn != null) btn.requestFocus();
                 setDockPeek(true, false);
             });
@@ -256,10 +249,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         handler.removeCallbacks(minuteTick);
     }
 
-    /** The overlay (Settings or Calendar) currently on screen, or null. */
+    /** The Settings overlay when it is on screen, or null. */
     private View openOverlay() {
         if (settingsOverlay != null && settingsOverlay.getVisibility() == View.VISIBLE) return settingsOverlay;
-        if (calendarOverlay != null && calendarOverlay.getVisibility() == View.VISIBLE) return calendarOverlay;
         return null;
     }
 
@@ -301,61 +293,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (trapFocusInOverlay(event)) return true;
-        if (event.getAction() == KeyEvent.ACTION_DOWN) {
-            int code = event.getKeyCode();
-            if (isPurpleOrMediaKey(code)) {
-                launchStremio();
-                return true;
-            }
-        }
         return super.dispatchKeyEvent(event);
-    }
-
-    private boolean isPurpleOrMediaKey(int code) {
-        switch (code) {
-            case KeyEvent.KEYCODE_MEDIA_PLAY:
-            case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
-            case KeyEvent.KEYCODE_DVR:
-            case KeyEvent.KEYCODE_GUIDE:
-            case KeyEvent.KEYCODE_BUTTON_1:
-            case KeyEvent.KEYCODE_BUTTON_2:
-            case KeyEvent.KEYCODE_BUTTON_3:
-            case KeyEvent.KEYCODE_BUTTON_4:
-            case KeyEvent.KEYCODE_PROG_RED:
-            case KeyEvent.KEYCODE_PROG_GREEN:
-            case KeyEvent.KEYCODE_PROG_YELLOW:
-            case KeyEvent.KEYCODE_PROG_BLUE:
-            case KeyEvent.KEYCODE_TV_MEDIA_CONTEXT_MENU:
-            case KeyEvent.KEYCODE_LAST_CHANNEL:
-            case 284:
-            case 285:
-            case 286:
-            case 287:
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    private void launchStremio() {
-        try {
-            Intent i = getPackageManager().getLeanbackLaunchIntentForPackage("com.stremio.one");
-            if (i == null) i = getPackageManager().getLaunchIntentForPackage("com.stremio.one");
-            if (i != null) {
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-                startActivity(i);
-            }
-        } catch (Exception ignored) {}
     }
 
     @Override
     public void onBackPressed() {
         if (settingsOverlay != null && settingsOverlay.getVisibility() == View.VISIBLE) {
             hideSettings();
-            return;
-        }
-        if (calendarOverlay != null && calendarOverlay.getVisibility() == View.VISIBLE) {
-            hideCalendar();
             return;
         }
         View focused = getCurrentFocus();
@@ -365,190 +309,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 focusTile(0);
             } else {
                 // Return from dock to top bar (peek mode, full photo view)
-                View btn = findViewById(R.id.btnCalendar);
+                View btn = findViewById(R.id.btnWifi);
                 if (btn != null) btn.requestFocus();
             }
         }
     }
-
-    // ---- Calendar Overlay ------------------------------------------------------------------------
-
-    private View calendarOverlay;
-    private TextView tvCalMonthYear, tvCalSubtitle;
-    private TableLayout calGridTable;
-    private int calYear = 2026, calMonth = Calendar.OCTOBER;
-
-    private static final class CalEvent {
-        final String badge;
-        final String title;
-        final int color;
-        CalEvent(String badge, String title, int color) {
-            this.badge = badge;
-            this.title = title;
-            this.color = color;
-        }
-    }
-    private static final Map<Integer, CalEvent> OCT_EVENTS = new HashMap<>();
-
-    private void showCalendar() {
-        if (calendarOverlay == null) {
-            calendarOverlay = findViewById(R.id.calendarOverlay);
-            tvCalMonthYear = findViewById(R.id.tvCalMonthYear);
-            tvCalSubtitle = findViewById(R.id.tvCalSubtitle);
-            calGridTable = findViewById(R.id.calGridTable);
-            findViewById(R.id.btnCalClose).setOnClickListener(v -> hideCalendar());
-            findViewById(R.id.btnCalPrev).setOnClickListener(v -> {
-                calMonth--;
-                if (calMonth < 0) { calMonth = 11; calYear--; }
-                renderCalendar();
-                v.requestFocus();
-            });
-            findViewById(R.id.btnCalNext).setOnClickListener(v -> {
-                calMonth++;
-                if (calMonth > 11) { calMonth = 0; calYear++; }
-                renderCalendar();
-                v.requestFocus();
-            });
-            findViewById(R.id.btnCalToday).setOnClickListener(v -> {
-                Calendar c = Calendar.getInstance();
-                calYear = c.get(Calendar.YEAR);
-                calMonth = c.get(Calendar.MONTH);
-                renderCalendar();
-                v.requestFocus();
-            });
-        }
-        grid.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
-        ((ViewGroup) findViewById(R.id.topButtons)).setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
-
-        Calendar c = Calendar.getInstance();
-        calYear = c.get(Calendar.YEAR);
-        calMonth = c.get(Calendar.MONTH);
-        renderCalendar();
-        calendarOverlay.setAlpha(0f);
-        calendarOverlay.setVisibility(View.VISIBLE);
-        calendarOverlay.animate().alpha(1f).setDuration(220).start();
-    }
-
-    private void hideCalendar() {
-        if (calendarOverlay == null || calendarOverlay.getVisibility() != View.VISIBLE) return;
-        calendarOverlay.animate().alpha(0f).setDuration(180).withEndAction(() -> {
-            calendarOverlay.setVisibility(View.GONE);
-            grid.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
-            ((ViewGroup) findViewById(R.id.topButtons)).setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
-            View btn = findViewById(R.id.btnCalendar);
-            if (btn != null) btn.requestFocus();
-        }).start();
-    }
-
-    private void renderCalendar() {
-        Calendar cal = Calendar.getInstance();
-        int todayYear = cal.get(Calendar.YEAR);
-        int todayMonth = cal.get(Calendar.MONTH);
-        int todayDay = cal.get(Calendar.DAY_OF_MONTH);
-
-        cal.set(Calendar.YEAR, calYear);
-        cal.set(Calendar.MONTH, calMonth);
-        cal.set(Calendar.DAY_OF_MONTH, 1);
-
-        SimpleDateFormat sdf = new SimpleDateFormat("MMMM yyyy", Locale.getDefault());
-        tvCalMonthYear.setText(sdf.format(cal.getTime()));
-        tvCalSubtitle.setText(todayDay + " " + new SimpleDateFormat("MMMM", Locale.getDefault()).format(cal.getTime()).toUpperCase(Locale.getDefault()) + " — No scheduled events");
-
-        calGridTable.removeAllViews();
-
-        int firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 1; // 0=Sunday
-        int daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
-
-        Calendar prevCal = (Calendar) cal.clone();
-        prevCal.add(Calendar.MONTH, -1);
-        int daysInPrevMonth = prevCal.getActualMaximum(Calendar.DAY_OF_MONTH);
-
-        int dayCounter = 1;
-        int nextMonthDayCounter = 1;
-        View viewToFocus = null;
-
-        for (int row = 0; row < 5; row++) {
-            TableRow tr = new TableRow(this);
-            TableLayout.LayoutParams trLp = new TableLayout.LayoutParams(
-                    TableLayout.LayoutParams.MATCH_PARENT, 0, 1f);
-            tr.setLayoutParams(trLp);
-
-            for (int col = 0; col < 7; col++) {
-                View cell = getLayoutInflater().inflate(R.layout.item_cal_day, tr, false);
-                TextView tvDayNum = cell.findViewById(R.id.tvDayNum);
-                View dotToday = cell.findViewById(R.id.dotToday);
-                View eventBadge = cell.findViewById(R.id.eventBadge);
-                View eventDot = cell.findViewById(R.id.eventDot);
-                TextView eventText = cell.findViewById(R.id.eventText);
-
-                TableRow.LayoutParams cellLp = new TableRow.LayoutParams(0, TableRow.LayoutParams.MATCH_PARENT, 1f);
-                cell.setLayoutParams(cellLp);
-
-                int cellIndex = row * 7 + col;
-                if (cellIndex < firstDayOfWeek) {
-                    int pDay = daysInPrevMonth - (firstDayOfWeek - 1 - cellIndex);
-                    tvDayNum.setText(String.valueOf(pDay));
-                    tvDayNum.setTextColor(0x38FFFFFF);
-                    cell.setAlpha(0.35f);
-                    cell.setFocusable(false);
-                    cell.setClickable(false);
-                } else if (dayCounter <= daysInMonth) {
-                    final int d = dayCounter;
-                    tvDayNum.setText(String.valueOf(d));
-                    cell.setFocusable(true);
-                    cell.setClickable(true);
-                    if (row == 0) {
-                        cell.setNextFocusUpId(R.id.btnCalToday);
-                    }
-                    boolean isToday = (calYear == todayYear && calMonth == todayMonth && d == todayDay);
-                    if (isToday) {
-                        dotToday.setVisibility(View.VISIBLE);
-                        dotToday.setBackgroundColor(0xFF38BDF8);
-                        tvDayNum.setTextColor(0xFF38BDF8);
-                        viewToFocus = cell;
-                    }
-
-                    if (calYear == 2026 && calMonth == Calendar.OCTOBER && OCT_EVENTS.containsKey(d)) {
-                        CalEvent ev = OCT_EVENTS.get(d);
-                        eventBadge.setVisibility(View.VISIBLE);
-                        eventDot.setBackgroundColor(ev.color);
-                        eventText.setText(ev.badge);
-                        eventText.setTextColor(ev.color);
-                    }
-
-                    cell.setOnFocusChangeListener((v, hasFocus) -> {
-                        if (hasFocus) {
-                            if (calYear == 2026 && calMonth == Calendar.OCTOBER && OCT_EVENTS.containsKey(d)) {
-                                tvCalSubtitle.setText(OCT_EVENTS.get(d).title);
-                                tvCalSubtitle.setTextColor(OCT_EVENTS.get(d).color);
-                            } else {
-                                tvCalSubtitle.setText(d + " " + sdf.format(cal.getTime()).toUpperCase(Locale.getDefault()) + " — No scheduled events");
-                                tvCalSubtitle.setTextColor(0xFF38BDF8);
-                            }
-                        }
-                    });
-
-                    dayCounter++;
-                } else {
-                    tvDayNum.setText(String.valueOf(nextMonthDayCounter++));
-                    tvDayNum.setTextColor(0x38FFFFFF);
-                    cell.setAlpha(0.35f);
-                    cell.setFocusable(false);
-                    cell.setClickable(false);
-                }
-
-                tr.addView(cell);
-            }
-            calGridTable.addView(tr);
-        }
-
-        if (viewToFocus != null) {
-            final View f = viewToFocus;
-            f.post(f::requestFocus);
-        }
-    }
-
-
 
     private void setDockPeek(boolean peek, boolean animate) {
         if (isDockPeeking == peek && dockPeekAnimator == null) return;
@@ -638,7 +403,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             int dy = dockTop - (int) (6 * density) - grid.getPaddingTop();
             if (Math.abs(dy) > 1) grid.smoothScrollBy(0, dy);
         } else {
-            // Row 1+ (Stremio shelf and All Apps): smooth, natural scroll without violent jumps
+            // Row 1+ (All Apps): smooth, natural scroll without violent jumps
             Rect want = new Rect(0, -(int) (12 * density), item.getWidth(), item.getHeight() + (int) (26 * density));
             grid.requestChildRectangleOnScreen(item, want, false);
         }
@@ -919,14 +684,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private void applyTopBarStyle(boolean showText) {
         isTopBarShowText = showText;
-        TextView btnCalendar = findViewById(R.id.btnCalendar);
         TextView btnSettings = findViewById(R.id.btnSettings);
 
         int padStart = (int) ((showText ? 16 : 11) * density);
         int padEnd = (int) ((showText ? 20 : 11) * density);
         int drawPad = (int) ((showText ? 9 : 0) * density);
 
-        TextView[] pills = new TextView[]{btnCalendar, btnWifi, btnSettings};
+        TextView[] pills = new TextView[]{btnWifi, btnSettings};
         for (TextView p : pills) {
             if (p != null) {
                 p.setPadding(padStart, 0, padEnd, 0);
@@ -934,7 +698,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
         }
 
-        if (btnCalendar != null) btnCalendar.setText(showText ? "Calendar" : "");
         if (btnSettings != null) btnSettings.setText(showText ? getString(R.string.settings) : "");
         updateWifiLabel();
     }
@@ -981,7 +744,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         if (settingsOverlay != null) settingsOverlay.setVisibility(View.GONE);
-        if (calendarOverlay != null) calendarOverlay.setVisibility(View.GONE);
     }
 
     private void hideSettings() {

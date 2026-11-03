@@ -145,12 +145,6 @@
                 android:orientation="horizontal">
 
                 <TextView
-                    android:id="@+id/btnCalendar"
-                    style="@style/TopButton"
-                    android:text="Calendar"
-                    android:drawableStart="@drawable/ic_calendar" />
-
-                <TextView
                     android:id="@+id/btnWifi"
                     style="@style/TopButton"
                     android:text="@string/wifi"
@@ -192,9 +186,6 @@
         android:layout_height="10dp"
         android:alpha="0"
         android:importantForAccessibility="no" />
-
-    <!-- Calendar Fullscreen Overlay -->
-    <include layout="@layout/overlay_calendar" />
 
     <!-- Settings Fullscreen Overlay -->
     <include layout="@layout/overlay_settings" />
