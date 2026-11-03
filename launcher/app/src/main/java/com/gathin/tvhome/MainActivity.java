@@ -226,6 +226,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         updateGreeting();
         updateWifiLabel();
         updateWallpaper();
+        if (settingsPanel != null) settingsPanel.refresh();
 
         handler.removeCallbacks(minuteTick);
         handler.postDelayed(minuteTick, MINUTE_MS);

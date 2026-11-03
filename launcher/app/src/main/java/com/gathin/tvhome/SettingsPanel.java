@@ -7,6 +7,7 @@ import android.provider.Settings;
 import android.view.View;
 import android.view.ViewStub;
 import android.widget.TextView;
+import android.widget.Toast;
 
 /**
  * Two-pane Settings: categories on the left (Device, Appearance, About), the chosen category's rows on
@@ -43,7 +44,9 @@ final class SettingsPanel {
     private View[] panes;
     /** First row of each pane (About has none). */
     private View[] firstRows;
-    private TextView valWallpaper, valDock, valTopBar;
+    private TextView valWallpaper, valDock, valTopBar, adbState;
+    /** The no-permission hint is shown once per launcher run. */
+    private boolean adbHintShown;
     private int current = -1;
     /** False as soon as hide() starts, so the fade-out no longer traps focus. */
     private boolean showing;
@@ -70,6 +73,11 @@ final class SettingsPanel {
         for (View c : cats) c.setSelected(false);
         selectCategory(0, false);
         cats[0].requestFocus();
+    }
+
+    /** Re-reads live values (ADB can change in Amazon's settings while the panel is open). */
+    void refresh() {
+        if (showing) refreshValues();
     }
 
     void hide(boolean animate) {
@@ -103,6 +111,7 @@ final class SettingsPanel {
         valWallpaper = find(R.id.valWallpaper);
         valDock = find(R.id.valDock);
         valTopBar = find(R.id.valTopBar);
+        adbState = find(R.id.adbState);
 
         for (int i = 0; i < cats.length; i++) {
             final int idx = i;
@@ -124,6 +133,7 @@ final class SettingsPanel {
         int[] rows = {R.id.rowAdb, R.id.rowFireSettings, R.id.rowWifi, R.id.rowWallpaper, R.id.rowDock, R.id.rowTopBar};
         for (int id : rows) find(id).setOnFocusChangeListener(rowFocus);
 
+        find(R.id.rowAdb).setOnClickListener(v -> toggleAdb());
         find(R.id.rowFireSettings).setOnClickListener(v -> host.openSystem(new Intent(Settings.ACTION_SETTINGS)));
         find(R.id.rowWifi).setOnClickListener(v -> host.openSystem(new Intent(Settings.ACTION_WIFI_SETTINGS)));
         find(R.id.rowWallpaper).setOnClickListener(v -> {
@@ -146,6 +156,24 @@ final class SettingsPanel {
             version.setText(activity.getString(R.string.settings_about_version, name));
         } catch (PackageManager.NameNotFoundException ignored) {
         }
+    }
+
+    /** Flips ADB when allowed; otherwise opens Developer Options. The badge always shows the re-read state. */
+    private void toggleAdb() {
+        if (AdbSwitch.canWrite(activity)) {
+            AdbSwitch.set(activity, !AdbSwitch.isEnabled(activity));
+            refreshAdb();
+            return;
+        }
+        if (!adbHintShown) {
+            adbHintShown = true;
+            Toast.makeText(activity, R.string.adb_no_permission_toast, Toast.LENGTH_LONG).show();
+        }
+        host.openSystem(AdbSwitch.developerOptionsIntent(activity));
+    }
+
+    private void refreshAdb() {
+        adbState.setText(AdbSwitch.isEnabled(activity) ? R.string.adb_on : R.string.adb_off);
     }
 
     private void enterPane(int idx) {
@@ -176,6 +204,7 @@ final class SettingsPanel {
     }
 
     private void refreshValues() {
+        refreshAdb();
         valWallpaper.setText(label(host.wallpaperTheme(), WALLPAPERS, new int[]{
                 R.string.settings_wallpaper_auto, R.string.settings_wallpaper_day, R.string.settings_wallpaper_night}));
         valDock.setText(label(host.peekDepth(), DOCKS, new int[]{
