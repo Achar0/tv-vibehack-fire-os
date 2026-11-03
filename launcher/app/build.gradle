@@ -10,6 +10,8 @@ android {
         applicationId 'com.gathin.tvhome'
         minSdk 26
         targetSdk 29
+        // Keep at 2 while ~/.local/share/firetv-debloat/rollback holds a versionCode-2 launcher: an equal
+        // version installs over in both directions, a lower one would need a downgrade Fire OS refuses.
         versionCode 2
         versionName '2.0'
     }

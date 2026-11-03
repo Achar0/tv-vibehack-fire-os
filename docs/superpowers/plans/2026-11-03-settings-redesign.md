@@ -178,6 +178,10 @@ Behavior:
 
 All `adb` commands target `-s <TV>:5555`. Results go into a `## Results` section appended to the spec.
 
+- [ ] **Step 0: Rollback material, before anything is installed.**
+  - Pull the installed launcher: `adb pull $(pm path com.gathin.tvhome)` to `~/.local/share/firetv-debloat/rollback/installed-before-redesign.apk`, plus a `sha256sum` file next to it.
+  - Save `screensaver_components`, `screensaver_enabled` and `screensaver_activate_on_sleep` as `key=value` lines in `rollback/settings-before.txt`.
+  - If anything in Steps 3–6 fails (no Home, crash, frozen remote), run `TV_HOST=<ip> ~/.local/share/firetv-debloat/rollback/rollback.sh` and stop.
 - [ ] **Step 1: Baseline, on the OLD build still installed.**
   - RAM: run `dumpsys meminfo com.gathin.tvhome` on Home, after 30 s idle, and record TOTAL PSS.
   - Home speed: 5× (open Prime Video, then `am start -W -n com.gathin.tvhome/.MainActivity`). Record the median `TotalTime`.
