@@ -16,7 +16,12 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            // R8 removes the unused library code and resources (~6 MB debug APK down to well under 1 MB).
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Same key as the debug build, so the release APK installs over the one on the TV.
+            signingConfig signingConfigs.debug
         }
     }
 

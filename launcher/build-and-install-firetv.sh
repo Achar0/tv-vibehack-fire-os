@@ -18,10 +18,15 @@ if [ -z "${ANDROID_HOME:-}" ]; then
 fi
 export JAVA_HOME ANDROID_HOME PATH="$JAVA_HOME/bin:$PATH"
 [ -f local.properties ] || echo "sdk.dir=$ANDROID_HOME" > local.properties
-./gradlew assembleDebug -q --console=plain
+./gradlew assembleRelease -q --console=plain
 adb connect "$T" >/dev/null
-adb -s "$T" install -r app/build/outputs/apk/debug/app-debug.apk
+adb -s "$T" install -r app/build/outputs/apk/release/app-release.apk
 adb -s "$T" shell pm grant com.gathin.tvhome android.permission.ACCESS_FINE_LOCATION || true
+# Settings > Device > ADB debugging switches ADB itself with this; without it the row opens Developer Options.
+adb -s "$T" shell pm grant com.gathin.tvhome android.permission.WRITE_SECURE_SETTINGS || true
+# The launcher's clock screensaver instead of Amazon's (Fire OS's own sleep timer still applies after it).
+adb -s "$T" shell settings put secure screensaver_components com.gathin.tvhome/.ClockDream
+adb -s "$T" shell settings put secure screensaver_enabled 1
 # Reinstalling unbinds the service, and writing the same value back doesn't rebind it,
 # so clear the setting first to force a fresh bind.
 adb -s "$T" shell settings delete secure enabled_accessibility_services >/dev/null
