@@ -1,7 +1,5 @@
 package com.gathin.tvhome;
 
-import android.animation.ArgbEvaluator;
-import android.animation.ValueAnimator;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
@@ -24,15 +22,14 @@ public class ClockDream extends DreamService {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Random random = new Random();
     private View content;
+    private View ambient;
     private GradientDrawable glow;
     private int colorIndex;
-    private int glowColor;
 
     private final Runnable tick = new Runnable() {
         @Override
         public void run() {
             moveClock();
-            shiftGlow();
             handler.postDelayed(this, MOVE_MS);
         }
     };
@@ -46,7 +43,7 @@ public class ClockDream extends DreamService {
         setContentView(R.layout.dream_clock);
 
         content = findViewById(R.id.dreamContent);
-        View ambient = findViewById(R.id.dreamAmbient);
+        ambient = findViewById(R.id.dreamAmbient);
         glow = new GradientDrawable();
         glow.setGradientType(GradientDrawable.RADIAL_GRADIENT);
         ambient.setBackground(glow);
@@ -70,18 +67,28 @@ public class ClockDream extends DreamService {
     @Override
     public void onDreamingStopped() {
         handler.removeCallbacks(tick);
+        if (content != null) content.animate().cancel();
+        if (ambient != null) ambient.animate().cancel();
         super.onDreamingStopped();
     }
 
     @Override
     public void onDetachedFromWindow() {
         handler.removeCallbacks(tick);
+        if (content != null) content.animate().cancel();
+        if (ambient != null) ambient.animate().cancel();
         super.onDetachedFromWindow();
     }
 
+    /** Once a minute: fade clock and glow out, move them and change the colour, fade back in.
+     *  Only alpha is animated (composited by the GPU); the gradient is redrawn once, while invisible. */
     private void moveClock() {
+        ambient.animate().alpha(0f).setDuration(900).start();
         content.animate().alpha(0f).setDuration(900).withEndAction(() -> {
+            colorIndex = (colorIndex + 1) % PALETTE.length;
+            setGlow(PALETTE[colorIndex]);
             placeClock();
+            ambient.animate().alpha(1f).setDuration(1200).start();
             content.animate().alpha(1f).setDuration(1200).start();
         }).start();
     }
@@ -101,17 +108,7 @@ public class ClockDream extends DreamService {
         }
     }
 
-    private void shiftGlow() {
-        int from = glowColor;
-        colorIndex = (colorIndex + 1) % PALETTE.length;
-        ValueAnimator anim = ValueAnimator.ofObject(new ArgbEvaluator(), from, PALETTE[colorIndex]);
-        anim.setDuration(8000);
-        anim.addUpdateListener(a -> setGlow((int) a.getAnimatedValue()));
-        anim.start();
-    }
-
     private void setGlow(int color) {
-        glowColor = color;
         int c = color & 0x00FFFFFF;
         glow.setColors(new int[]{0x40000000 | c, 0x14000000 | c, 0x00000000 | c});
     }
