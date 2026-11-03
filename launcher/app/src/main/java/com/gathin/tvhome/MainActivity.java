@@ -568,6 +568,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
     }
 
     private void open(Intent i) {
+        if (!tryOpen(i)) Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
+    }
+
+    /** Starts {@code i}; false when nothing answers it or it is not exported to us. */
+    private boolean tryOpen(Intent i) {
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         // Fire OS opens its settings screens via Amazon's home; tell the Home override to let it through.
         if (i.getAction() != null && i.getAction().startsWith("android.settings.")) {
@@ -575,8 +580,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         }
         try {
             startActivity(i);
-        } catch (ActivityNotFoundException e) {
-            Toast.makeText(this, "Not available on this TV", Toast.LENGTH_SHORT).show();
+            return true;
+        } catch (ActivityNotFoundException | SecurityException e) {
+            return false;
         }
     }
 
@@ -731,6 +737,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
     @Override
     public void openSystem(Intent intent) {
         open(intent);
+    }
+
+    @Override
+    public boolean tryOpenSystem(Intent intent) {
+        return tryOpen(intent);
     }
 
     @Override

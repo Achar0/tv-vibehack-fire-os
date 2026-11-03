@@ -16,6 +16,7 @@
     <string name="good_night">Good night</string>
     <string name="ethernet">Ethernet</string>
     <string name="offline">Offline</string>
+    <string name="not_available">Not available on this TV</string>
     <string name="settings_title">Settings</string>
     <string name="settings_back_hint">Back returns, Home closes</string>
     <string name="settings_cat_device">Device</string>

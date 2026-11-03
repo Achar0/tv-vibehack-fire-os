@@ -27,6 +27,8 @@ final class SettingsPanel {
         String wallpaperTheme();
         void setWallpaperTheme(String theme);
         void openSystem(Intent intent);
+        /** Starts the screen if it exists; false (and no message) when it can't be opened. */
+        boolean tryOpenSystem(Intent intent);
     }
 
     static final String[] WALLPAPERS = {"auto", "day", "night"};
@@ -169,7 +171,10 @@ final class SettingsPanel {
             adbHintShown = true;
             Toast.makeText(activity, R.string.adb_no_permission_toast, Toast.LENGTH_LONG).show();
         }
-        host.openSystem(AdbSwitch.developerOptionsIntent(activity));
+        for (Intent i : AdbSwitch.developerOptionsIntents(activity)) {
+            if (host.tryOpenSystem(i)) return;
+        }
+        Toast.makeText(activity, R.string.not_available, Toast.LENGTH_SHORT).show();
     }
 
     private void refreshAdb() {
