@@ -373,14 +373,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
     @Override
     public void onTileFocused(int position, View card) {
         lastFocused = position;
-        // Tile rect in root coordinates, normalized by subtracting current grid translation.
+        // Tile rect in root coordinates (layout position: the dock's translation isn't in it).
         Rect r = new Rect(0, 0, card.getWidth(), card.getHeight());
         root.offsetDescendantRectToMyCoords(card, r);
         float pad = 6f * density;        // matches GlassView's glow inset
         float w = card.getWidth() * AppAdapter.FOCUS_SCALE + 2 * pad;
         float h = card.getHeight() * AppAdapter.FOCUS_SCALE + 2 * pad;
         float x = r.exactCenterX() - w / 2f;
-        float y = r.exactCenterY() - h / 2f - grid.getTranslationY();
+        float y = DockGlass.top(r.exactCenterY(), h);
 
         ViewGroup.LayoutParams lp = glass.getLayoutParams();
         if (lp.width != (int) w || lp.height != (int) h) {
@@ -391,7 +391,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         }
         glassTargetX = x;
         glassTargetY = y;
-        if (!glassShown) {
+        if (!DockGlass.canShow(dockSpring.isRunning(), grid.getTranslationY())) {
+            // Dock still rising: onDockSettled() calls back here once it has arrived.
+        } else if (!glassShown) {
             springX.cancel();
             springY.cancel();
             glass.setTranslationX(x);
