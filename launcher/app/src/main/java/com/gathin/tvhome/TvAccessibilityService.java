@@ -29,8 +29,8 @@ public class TvAccessibilityService extends AccessibilityService {
     // Fire OS opens its Settings by briefly showing Amazon's HomeActivity (220-300 ms), then
     // MainSettingsActivity on top. When this launcher opens a settings screen it calls
     // letAmazonHomeThrough(), so that one pass isn't redirected. Every other appearance of Amazon's
-    // home is redirected after a short delay that only lets the window settle.
-    private static final long REDIRECT_DELAY_MS = 150;
+    // home is redirected at once, without a window animation, so it barely shows. (Fire OS keeps the
+    // Home key itself from accessibility services, so its window appearing is the earliest signal.)
     private static final long LET_THROUGH_MAX_MS = 3000;
     private static volatile long letThroughUntil = 0;
 
@@ -38,6 +38,10 @@ public class TvAccessibilityService extends AccessibilityService {
     private boolean homeOverride;
     private boolean remapMediaKeys;
     private String frontWindow = "";
+    /** When Back was last released (uptime ms), to tell a Back return from a Home press. */
+    private long lastBackUp = HomeReturn.NEVER;
+    /** When the current Amazon home window appeared. */
+    private long amazonHomeAt;
 
     private final Runnable redirectIfStillAmazonHome = () -> {
         if (isAmazonHome(frontWindow) && !lettingThrough()) goHome();
@@ -78,7 +82,8 @@ public class TvAccessibilityService extends AccessibilityService {
         if (frontWindow.startsWith(AMAZON_LAUNCHER + "/") && frontWindow.contains("Settings")) letThroughUntil = 0;
         handler.removeCallbacks(redirectIfStillAmazonHome);
         if (isAmazonHome(frontWindow) && !lettingThrough()) {
-            handler.postDelayed(redirectIfStillAmazonHome, REDIRECT_DELAY_MS);
+            amazonHomeAt = SystemClock.uptimeMillis();
+            handler.post(redirectIfStillAmazonHome);
         }
     }
 
@@ -91,6 +96,9 @@ public class TvAccessibilityService extends AccessibilityService {
 
     @Override
     protected boolean onKeyEvent(KeyEvent event) {
+        if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
+            lastBackUp = event.getEventTime();   // same uptime clock as SystemClock.uptimeMillis()
+        }
         if (remapMediaKeys && isPurpleOrMediaKey(event.getKeyCode())) {
             // Consume both down and up, but only if Stremio is there to open.
             Intent stremio = stremioIntent();
@@ -149,7 +157,8 @@ public class TvAccessibilityService extends AccessibilityService {
     private void goHome() {
         Intent i = new Intent(this, MainActivity.class);
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
-                | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+                | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+        i.putExtra(HomeReturn.EXTRA_VIA_BACK, HomeReturn.isBackReturn(lastBackUp, amazonHomeAt));
         try { startActivity(i); } catch (Exception ignored) {}
     }
 }

@@ -238,7 +238,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         updateGreeting();
         updateWifiLabel();
         updateWallpaper();
-        if (settingsPanel != null) settingsPanel.refresh();
+        if (settingsPanel != null) {
+            settingsPanel.refresh();
+            settingsPanel.clearOpenedSystemScreen();   // back in the launcher: that trip is over
+        }
 
         handler.removeCallbacks(minuteTick);
         handler.postDelayed(minuteTick, MINUTE_MS);
@@ -714,11 +717,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         updateWifiLabel();
     }
 
-    /** Home pressed while the launcher is open: always show the clean home screen. */
+    /**
+     * Home pressed (or Amazon's home bounced us back): show the clean home screen, unless this is Back
+     * from a Fire OS screen that Settings opened, which returns to Settings where you left it.
+     */
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        if (settingsPanel != null) settingsPanel.hide(false);
+        if (settingsPanel == null) return;
+        boolean viaBack = intent.getBooleanExtra(HomeReturn.EXTRA_VIA_BACK, false);
+        if (!HomeReturn.keepSettings(viaBack, settingsPanel.openedSystemScreen())) settingsPanel.hide(false);
+        settingsPanel.clearOpenedSystemScreen();
     }
 
     // ---- SettingsPanel.Host --------------------------------------------------------------------

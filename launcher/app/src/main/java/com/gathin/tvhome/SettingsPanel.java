@@ -56,6 +56,8 @@ final class SettingsPanel {
     /** The no-permission hint is shown once per launcher run. */
     private boolean adbHintShown;
     private int current = -1;
+    /** A Fire OS screen was opened from here and we haven't come back yet. */
+    private boolean openedSystemScreen;
     /** False as soon as hide() starts, so the fade-out no longer traps focus. */
     private boolean showing;
 
@@ -68,6 +70,10 @@ final class SettingsPanel {
     boolean isShowing() { return showing; }
 
     View root() { return root; }
+
+    boolean openedSystemScreen() { return showing && openedSystemScreen; }
+
+    void clearOpenedSystemScreen() { openedSystemScreen = false; }
 
     void show() {
         show(0, 0);
@@ -204,7 +210,10 @@ final class SettingsPanel {
             Toast.makeText(activity, R.string.adb_no_permission_toast, Toast.LENGTH_LONG).show();
         }
         for (Intent i : AdbSwitch.developerOptionsIntents(activity)) {
-            if (host.tryOpenSystem(i)) return;
+            if (host.tryOpenSystem(i)) {
+                openedSystemScreen = true;
+                return;
+            }
         }
         Toast.makeText(activity, R.string.not_available, Toast.LENGTH_SHORT).show();
     }
@@ -214,7 +223,8 @@ final class SettingsPanel {
     }
 
     private void openOrSay(Intent i) {
-        if (!host.tryOpenSystem(i)) Toast.makeText(activity, R.string.not_available, Toast.LENGTH_SHORT).show();
+        if (host.tryOpenSystem(i)) openedSystemScreen = true;
+        else Toast.makeText(activity, R.string.not_available, Toast.LENGTH_SHORT).show();
     }
 
     private void enterPane(int idx) {
