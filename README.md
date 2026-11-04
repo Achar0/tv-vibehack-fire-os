@@ -44,7 +44,8 @@ Tested on a Fire TV Stick 4K (`AFTKM`), Fire OS 8.1.8.2 (Android 11).
 - **Small**: release build with R8 and resource shrinking, **≈ 0.75 MB** (the debug build was 3.6 MB).
   No INTERNET permission.
 - **Debloat list** for the AFTKM: [`examples/amazon-fire-tv-stick-4k-aftkm/debloat.txt`](examples/amazon-fire-tv-stick-4k-aftkm/debloat.txt).
-  - 21 packages, disabled and never uninstalled.
+  - 58 packages, disabled and never uninstalled: the original 21 plus 37 from cleanyourtv's list for the same model.
+  - Amazon's own home can't be removed on a locked stick: [why](docs/what-we-did.md#9-can-amazons-home-be-removed-nov-4).
 
 ## Compared with cleanyourtv
 
@@ -71,6 +72,10 @@ Home to a third-party launcher"**. That missing half is what this version adds.
 
 **In short:** on any Android or Google TV, use cleanyourtv. On a Fire TV, cleanyourtv's debloat list plus
 this launcher gives you the home screen back.
+
+Testing showed that cleanyourtv's own launcher can do the same on Fire OS through `stock_home_redirect`; only its install
+script stopped short. [PR #3276](https://github.com/Gathin23/cleanyourtv/pull/3276) fixes that upstream (open, waiting
+for a maintainer).
 
 ## Compared with tv-vibehack
 

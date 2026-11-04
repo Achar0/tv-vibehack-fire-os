@@ -46,6 +46,17 @@ Everything was done from a Linux PC over ADB, with Claude Code doing the work an
 - **cleanyourtv:** a SHOWCASE row for the Fire OS 8 Home redirect with Settings pass-through,
   [#3204](https://github.com/Gathin23/cleanyourtv/pull/3204), **merged Nov 4**. It links to the `fire-tv` branch of
   [Achar0/tv-vibehack](https://github.com/Achar0/tv-vibehack/tree/fire-tv).
+- **cleanyourtv, the launcher on Fire OS:**
+  [#3276](https://github.com/Gathin23/cleanyourtv/pull/3276), open, waiting for a maintainer decision (CI green).
+  - Testing cleanyourtv's own launcher on this stick (installed next to this one under a test package name) showed
+    that its `stock_home_redirect` already works on Fire OS: Home redirected 0.14–0.36 s after Amazon's home, and its
+    Settings and Wi-Fi buttons open and return with Back, because it starts Amazon's `MainSettingsActivity` directly.
+  - What stopped it was the install script. With `STOCK_LAUNCHER=none` it requires Home to resolve to the new
+    launcher, and on Fire OS Amazon's launcher always wins (priority 950; `set-home-activity` answers "Success" and
+    changes nothing). So the script stopped before enabling the redirect service.
+  - The PR lets the script accept that state when `HOME_KEY_SERVICE=1` is set (bash and PowerShell). It adds two
+    simulated-TV tests (2864/2864 pass) and updates the AFTKM list's docs. It ran end to end on this stick.
+  - It touches the same test helper as #3005 (upgrades on Google TV redirect setups); the two are complementary.
 - **Planned:** after a few days of use, add the AFTKM as a second unit to cleanyourtv's
   `amazon-fire-tv-stick-4k-2023` example, with the findings in section 2.
 
@@ -117,10 +128,43 @@ What changed:
   Live tab, launcher ad bidding, upgrade promos, `wifilocker`) were still active. All 37 disabled; 58 in total.
 - About 120 MB of them was resident before (PSS); used RAM after a reboot is about 165 MB lower than before.
 - Survived a reboot with nothing re-enabled; Home, Fire TV settings, YouTube and Prime Video work; no crashes.
-- **Amazon's home can't be disabled, not even one component:** `pm disable-user` on
-  `com.amazon.tv.launcher/.ui.HomeActivity_vNext` answers "Cannot disable a protected package". The redirect stays.
+- Before applying it, the current state was saved and an undo script written (`pm enable` for each of the 37).
+  The first run had a bug: `adb shell` inside a `while read` loop swallowed the list, so only one package was
+  disabled. It was caught by checking the TV (`pm list packages -d`), not the script's own output, and re-run with
+  `</dev/null`. The undo script had the same bug and was fixed too.
+- A warning carried over from cleanyourtv (#2950): one AFTKM with about 50 packages disabled stopped opening Settings
+  and most apps after a Fire OS update. Re-enable everything before an update, or keep the restore ready.
 
-## 9. Known limits
+## 9. Can Amazon's home be removed? (Nov 4)
+
+Amazon's launcher (`com.amazon.tv.launcher`) is the biggest process left: about 114 MB, always resident. It also
+contains Amazon's Settings screens (`MainSettingsActivity`). Every route was checked:
+
+| Route | Result |
+|---|---|
+| Disable the package | Refused: "Cannot disable a protected package" |
+| Disable only its home screen (`.ui.HomeActivity_vNext`) | Refused with the same error: the protection covers components too |
+| Make another app the default Home (`set-home-activity`) | Answers "Success", but Home still resolves to Amazon's (priority 950) |
+| Hide or suspend the package | Not tried: it would take Amazon's Settings screens down with it |
+| Install a modified Amazon launcher as an update | Impossible: it's a system app signed with Amazon's key, and Android only accepts updates signed with the same key |
+| A modified Fire OS update | Impossible: the stick checks Amazon's signature on every system update |
+| Root / unlocked bootloader | No public unlock for the AFTKM; it would also risk bricking it and break protected streaming |
+| Restrict it from running in the background | Accepted, but no gain (below), so it was undone |
+
+The background-restriction test ran twice for 10 minutes each: three Home presses, then idle on this launcher.
+
+| Amazon's launcher | Before | With `RUN_ANY_IN_BACKGROUND ignore` |
+|---|---|---|
+| CPU used | 0.89 s | 0.97 s |
+| Memory (PSS) | 106 MB | 103 MB |
+| Log lines written | 273 | 308 |
+
+- The differences are within normal variation. Idle, Amazon's launcher already does almost nothing (under 0.2% of
+  one core). Its memory is code and data it keeps loaded, which a background restriction doesn't free.
+- Fire OS also ignored `am set-standby-bucket … restricted`: as the home app it stays in the active bucket.
+- **Conclusion:** the redirect plus the debloat is as far as a locked stick goes.
+
+## 10. Known limits
 
 - After switching language, the old screen's bitmaps stay in memory until the next garbage collection.
   This only happens on a language change, which is rare.
