@@ -72,6 +72,28 @@ Home to a third-party launcher"**. That missing half is what this version adds.
 **In short:** on any Android or Google TV, use cleanyourtv. On a Fire TV, cleanyourtv's debloat list plus
 this launcher gives you the home screen back.
 
+## Compared with tv-vibehack
+
+[benfirad/tv-vibehack](https://github.com/benfirad/tv-vibehack) is the base: this repo starts from its `main`
+(last changed 2026-10-19) and is 30 commits ahead, 0 behind. 64 files changed, +2,383 / −1,488.
+
+| | tv-vibehack `main` | This version |
+|---|---|---|
+| **Builds as-is** | No: duplicate image resources break the build (fixed here, sent as [PR #1](https://github.com/benfirad/tv-vibehack/pull/1)) | Yes |
+| **Fire TV** | Not supported: Home stays Amazon's | Home override through an accessibility service, Settings pass-through, Back handling, AFTKM debloat list (sent as [PR #5](https://github.com/benfirad/tv-vibehack/pull/5)) |
+| **Settings** | One overlay of button groups: top bar style, dock level, wallpaper, Fire OS shortcuts | Two panes with a hierarchy: Device / Appearance / About |
+| **ADB** | Only through the TV's own menus | On/off switch in Settings, falls back to Amazon's Debug ADB screen |
+| **Top bar** | Calendar, Wi-Fi, Settings pills | Wi-Fi, Settings (calendar removed) |
+| **Stremio** | Shelf with five sample banners | Removed |
+| **Screensaver** | `ClockDream` class present but not registered, so it can't be chosen | Registered and set as the system screensaver by the install script |
+| **Languages** | English, German | English, Italiano, 中文 chosen in Settings (German strings kept) |
+| **Motion** | Duration-based focus animations | Critically damped springs, tilt toward the D-pad direction, press-in on OK; respects the TV's animation scale |
+| **Focus highlight** | Could appear above the dock for a moment on Down from the top bar | Waits until the dock has settled |
+| **Release build** | No shrinking (≈ 3.5 MB) | R8 + resource shrinking, wallpapers recompressed: ≈ 0.75 MB |
+| **Permissions** | Includes INTERNET | No INTERNET; adds WRITE_SECURE_SETTINGS (for the ADB switch, granted by the install script) |
+| **Unit tests** | None | 28 JVM tests for the logic (choices, ADB fallbacks, language defaults, Back vs Home, highlight placement) |
+| **Rollback** | `tools/restore*` | Plus [`tools/rollback-firetv.sh`](tools/rollback-firetv.sh) to go back to a saved earlier build |
+
 ## Install (Fire TV)
 
 1. On the TV: Settings → My Fire TV → About → press OK on the device name 7 times → Developer Options →
@@ -89,6 +111,14 @@ this launcher gives you the home screen back.
 
 Personal choices live in [`launcher/app/src/main/res/values/config.xml`](launcher/app/src/main/res/values/config.xml):
 dock apps, hidden apps, columns.
+
+## Wallpapers
+
+The two built-in wallpapers (`launcher/app/src/main/res/drawable-nodpi/wallpaper_day.jpg` and
+`wallpaper_night.jpg`) come from tv-vibehack, only recompressed here. They show characters from
+*The Amazing World of Gumball*, which belongs to Cartoon Network / Warner Bros. Discovery. They are fan art:
+not covered by this repo's MIT licence, and not ours to license. If you build on or redistribute this, replace
+them with your own images (same file names, 16:9 JPEG).
 
 ## How it was made
 

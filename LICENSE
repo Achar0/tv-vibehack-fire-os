@@ -25,3 +25,7 @@ SOFTWARE.
 The Outfit typeface in launcher/app/src/main/res/font/outfit.ttf is copyright
 The Outfit Project Authors and licensed under the SIL Open Font License 1.1,
 see launcher/FONT-LICENSE-OFL.txt.
+
+The wallpapers in launcher/app/src/main/res/drawable-nodpi/wallpaper_day.jpg and wallpaper_night.jpg
+show characters from The Amazing World of Gumball (Cartoon Network / Warner Bros. Discovery). They are
+fan art carried over from tv-vibehack and are not covered by the MIT licence above.
