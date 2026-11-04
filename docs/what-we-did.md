@@ -111,7 +111,16 @@ What changed:
   - The focus highlight subtracted the dock's slide offset from a position that never included it.
   - It now appears only once the dock has settled, directly on the tile.
 
-## 8. Known limits
+## 8. More debloat (Nov 4)
+
+- Compared with cleanyourtv's community list for the same model: 37 more Amazon packages (Alexa extras, telemetry,
+  Live tab, launcher ad bidding, upgrade promos, `wifilocker`) were still active. All 37 disabled; 58 in total.
+- About 120 MB of them was resident before (PSS); used RAM after a reboot is about 165 MB lower than before.
+- Survived a reboot with nothing re-enabled; Home, Fire TV settings, YouTube and Prime Video work; no crashes.
+- **Amazon's home can't be disabled, not even one component:** `pm disable-user` on
+  `com.amazon.tv.launcher/.ui.HomeActivity_vNext` answers "Cannot disable a protected package". The redirect stays.
+
+## 9. Known limits
 
 - After switching language, the old screen's bitmaps stay in memory until the next garbage collection.
   This only happens on a language change, which is rare.
