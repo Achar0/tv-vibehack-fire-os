@@ -1,129 +1,96 @@
-# tv-vibehack (Stremio & Peek Edition)
+# tv-vibehack for Fire OS
 
-**Your TV, minus the ads — with a dynamic Stremio shelf and ultra-low peek dock.**
-A lightweight, privacy-focused tvOS-inspired launcher fork for Android TV and Google TV sets.
+A clean, Apple TV–style home screen that actually takes over **Home on an Amazon Fire TV Stick**,
+plus an ad-free debloat list for it.
 
-This fork builds upon [Gathin23/cleanyourtv](https://github.com/Gathin23/cleanyourtv) with a rich media shelf, wallpaper peek physics, a frosted glass settings interface, and integrated calendar tracking.
+This is an alternative version built on two projects:
 
-<p align="center">
-  <img src="docs/new-home.jpg" alt="Wallpaper-Focused tvOS Launcher on Android TV" width="100%">
-</p>
+- [**benfirad/tv-vibehack**](https://github.com/benfirad/tv-vibehack): the launcher this repo was forked from.
+- [**Gathin23/cleanyourtv**](https://github.com/Gathin23/cleanyourtv): the original project tv-vibehack forked.
 
-### Before & After
+Both are MIT-licensed; so is this. The original README is kept in [`docs/upstream-README.md`](docs/upstream-README.md).
 
-<p align="center">
-  <img src="docs/stock-vs-new-side.jpg" alt="Before and After: Stock TV vs Wallpaper-Focused Launcher" width="100%">
-</p>
+Tested on a Fire TV Stick 4K (`AFTKM`), Fire OS 8.1.8.2 (Android 11).
 
-Everything is reversible: packages are disabled, never uninstalled, and a restore script puts the stock launcher back.
-
-## Fork Features
-
-- **Wallpaper-Focused Ambient Aesthetics:** Transforms your living room TV into an artful ambient display with dynamic Day/Night solar cycles.
-- **Ultra-Low Dock Peek Mode:** Minimizes the dock down towards the bottom bezel when unfocused so your wallpapers and ambient art remain unobstructed. Seamlessly springs back up when pressing DPAD Down.
-- **Stremio Integration & Media Shelf:** Adds an auto-populated shelf for continue-watching and trending Stremio media with cached posters and seamless leanback launching.
-- **Frosted Glass Settings:** A leanback tvOS-style frosted glass settings overlay allowing you to toggle dock peek depth (Ultra / Balanced / None), pill styles (icon-only vs. text+logo), and themes.
-- **Dynamic Day/Night Theme Cycle:** Automatically transitions wallpapers between day and night based on the local solar cycle.
-- **Calendar & Schedule Overlay:** Lightweight, keyboard/dpad friendly month calendar with day tracking and agenda support.
-- **Smart App Labels:** Keeps the interface clean by revealing app titles only under the currently focused item.
-- **Remote Video Key Shortcut:** Accessibility service helper to map remote media/video shortcuts to launch Stremio directly.
-
-| Dynamic Wallpaper & Peek Dock Mode | Dynamic Stremio Media Shelf |
+| Home | Dock |
 |---|---|
-| ![Ultra-low dock peek mode](docs/dock-peek-wallpaper.png) | ![Stremio shelf and dock apps](docs/stremio-shelf.png) |
+| ![Home screen, dock lowered](docs/images/home.jpg) | ![Dock raised, glass highlight on a tile](docs/images/dock.jpg) |
+| **Settings: Device** | **Settings: Appearance** |
+| ![Two-pane settings, Device: Debug ADB switch](docs/images/settings-device.jpg) | ![Two-pane settings, Appearance: wallpaper, dock, top bar, language](docs/images/settings-appearance-en.jpg) |
+| **中文** | **Clock screensaver** |
+| ![Settings in Simplified Chinese](docs/images/settings-zh.jpg) | ![Clock screensaver](docs/images/screensaver.jpg) |
 
-| Frosted Glass Settings Overlay |
-|---|
-| ![Frosted glass settings](docs/settings-frosted.png) |
+## What it does on Fire OS
 
-## Quick start
+- **Takes Home back from Amazon.** Fire OS won't let another app become the default home and protects
+  its own launcher, so an accessibility service brings this launcher to the front whenever Amazon's home
+  appears.
+  - The switch happens at once, with no window animation. The launcher has focus about 0.28 s after
+  Amazon's home starts (was 0.89 s).
+  - Fire OS keeps the Home key itself from apps (checked with a key-logging build: Down, Right and Back
+  arrive, Home never does), so Amazon's window appearing is the earliest possible signal.
+- **Fire OS settings still open.** Fire OS opens Settings through Amazon's home, so the launcher lets
+  that one pass through.
+  - Back from Fire TV settings or Wi-Fi returns to the launcher's Settings panel; Home goes to the home screen.
+- **Two-pane Settings** with a hierarchy: Device / Appearance / About.
+  - **Debug ADB is a real switch.** It flips `adb_enabled` directly (the install script grants
+  `WRITE_SECURE_SETTINGS`).
+  - Without that permission, it opens Amazon's Developer Options straight on the Debug ADB row. That
+  screen was found by reverse-engineering Amazon's Settings app.
+- **Clock screensaver** replaces Amazon's, using the same idle timer.
+- **Launcher language**: English, Italiano, 中文 (Simplified), independent of the TV's language.
+- **Apple TV–style motion**: critically damped springs, a slight tilt toward the D-pad direction,
+  press-in on OK. Only transform and opacity are animated, and the TV's animation scale is respected.
+- **Small**: release build with R8 and resource shrinking, **≈ 0.75 MB** (the debug build was 3.6 MB).
+  No INTERNET permission.
+- **Debloat list** for the AFTKM: [`examples/amazon-fire-tv-stick-4k-aftkm/debloat.txt`](examples/amazon-fire-tv-stick-4k-aftkm/debloat.txt).
+  - 21 packages, disabled and never uninstalled.
 
-1. On the TV: Settings → Device Preferences → About → press OK on **Build** seven times → back →
-   Developer options → turn on **USB debugging** (and Network/ADB debugging if your TV shows it).
-   Keep the TV on and on the same Wi-Fi as your computer.
-2. Open Claude Code (or your assistant of choice) on your computer and paste the prompt from
-   [`PROMPT.md`](PROMPT.md), filling in your TV model.
-3. Accept the "Allow USB debugging?" prompt on the TV when told to, then answer the checklist
-   questions (which apps you use, which apps go in the dock).
+## Compared with cleanyourtv
 
-That's it. The assistant backs up, debloats, builds and installs the launcher, and verifies each
-step with screenshots from the TV. If you'd rather do it by hand, the pieces are below.
+cleanyourtv (v3.3, Nov 2026) is the far bigger project: hundreds of TV models, 31 languages, themes and
+add-ons. On Fire TV, though, its README says it does **"the debloat half only, since Fire OS will not hand
+Home to a third-party launcher"**. That missing half is what this version adds.
 
-## What's in the repo
+| | cleanyourtv 3.3 | This version |
+|---|---|---|
+| **Scope** | Any Android / Google TV; Fire TV debloat lists for many models | Fire TV Stick 4K (AFTKM), one owner's setup |
+| **Home on Fire TV** | Not possible, debloat only | Taken over via the accessibility redirect |
+| **Home redirect speed** | n/a | Launcher focused ~0.28 s after Amazon's home starts |
+| **Fire OS settings from the launcher** | n/a on Fire TV | Pass-through; Back returns to the Settings panel |
+| **Settings on the TV** | Hold OK on Settings → launcher settings page | Two-pane panel: Device / Appearance / About |
+| **ADB on/off** | Through the TV's own menus | One switch in Settings (`WRITE_SECURE_SETTINGS`); falls back to Amazon's Debug ADB screen |
+| **Languages** | 31, follows the TV, right-to-left for Hebrew | 3 chosen in the launcher (en / it / zh) + German strings from tv-vibehack |
+| **Themes / module cards / add-ons** | Yes (21 themes, cards, add-ons) | No |
+| **App library, tile menu (move / remove)** | Yes | Long-press = App info only |
+| **Inputs (HDMI / AV / Live TV)** | Yes | Hidden: a stick has none |
+| **Clock screensaver** | Drifting clock | Clock with a slow colour glow; replaces Amazon's |
+| **Size** | ≈ 572 KB | ≈ 0.75 MB (includes 1376×768 wallpapers) |
+| **Network permission** | None | None |
+| **Rollback** | `tools/restore.*` | Same, plus [`tools/rollback-firetv.sh`](tools/rollback-firetv.sh): reinstalls a saved earlier build and the old screensaver settings |
 
-| Path | What it is |
-|---|---|
-| [`PROMPT.md`](PROMPT.md) | The prompt. Brand-neutral; the assistant discovers your TV's bloat. |
-| [`launcher/`](launcher/) | The tvOS-style launcher with Stremio shelf and frosted settings. Configure in `app/src/main/res/values/config.xml`, then run `build-and-install.sh`. |
-| [`tools/tv.py`](tools/tv.py) | Pure-Python ADB client (shell, batch, push, pull). Works where the stock `adb` is blocked. |
-| [`tools/b64push.py`](tools/b64push.py) | Uploads larger files (APKs) as base64 chunks with an md5 check. |
-| [`tools/disable.sh`](tools/disable.sh), [`tools/restore.sh`](tools/restore.sh) | Apply or undo a debloat list. |
-| [`examples/`](examples/) | Per-TV debloat lists. Add yours, see [CONTRIBUTING.md](CONTRIBUTING.md). |
+**In short:** on any Android or Google TV, use cleanyourtv. On a Fire TV, cleanyourtv's debloat list plus
+this launcher gives you the home screen back.
 
-## The launcher
+## Install (Fire TV)
 
-A native, snappy Android TV home screen (`com.gathin.tvhome`), optimized for sets with 1 GB of RAM:
+1. On the TV: Settings → My Fire TV → About → press OK on the device name 7 times → Developer Options →
+   **ADB debugging** on.
+2. Debloat: see [`docs/fire-tv.md`](docs/fire-tv.md).
+3. Build and install (JDK 17, Android SDK 34):
 
-- Pitch-black background or dynamic Day/Night wallpapers.
-- Stremio shelf row with instant launch and poster previews.
-- A dock at the bottom in a rounded band with the apps you choose. Ultra-low peek mode minimizes the dock to let wallpapers shine.
-- Translucent frosted glass highlights with smooth focus physics.
-- Top pills: **Inputs** (HDMI ports, AV and Live TV), **Wi-Fi** (network status), **Settings** overlay and **Calendar** overlay.
-- Large thin clock and greeting top left, set in [Outfit](https://fonts.google.com/specimen/Outfit).
-- Fast D-pad navigation, last focused tile remembered, responsive animations.
+   ```bash
+   TV_HOST=<fire-tv-ip> launcher/build-and-install-firetv.sh
+   ```
 
-Configure it in [`launcher/app/src/main/res/values/config.xml`](launcher/app/src/main/res/values/config.xml):
-dock order, hidden apps, Live TV package and columns. Build and install with
+   It builds the release APK, installs it, grants `WRITE_SECURE_SETTINGS`, sets the Clock screensaver
+   and enables the Home override.
+4. Turn ADB off afterwards: Settings → Device → Debug ADB.
 
-```bash
-TV_HOST=192.168.1.50 launcher/build-and-install.sh
-```
+Personal choices live in [`launcher/app/src/main/res/values/config.xml`](launcher/app/src/main/res/values/config.xml):
+dock apps, hidden apps, columns.
 
-Needs JDK 17 and the Android SDK (platform 34, build-tools 34.0.0). On macOS:
-`brew install openjdk@17 android-commandlinetools && sdkmanager "platforms;android-34" "build-tools;34.0.0"`.
+## How it was made
 
-## Talking to the TV by hand
-
-```bash
-python3 -m venv tools/venv && tools/venv/bin/pip install -r tools/requirements.txt
-export TV_HOST=192.168.1.50                                   # your TV's IP
-tools/venv/bin/python -I tools/tv.py --probe                 # model, Android version, firmware
-tools/venv/bin/python -I tools/tv.py 'pm list packages'      # one command
-printf 'cmd1\ncmd2\n' | tools/venv/bin/python -I tools/tv.py --batch
-tools/disable.sh examples/xiaomi-mi-tv-4a/debloat.txt        # apply a list
-tools/restore.sh examples/xiaomi-mi-tv-4a/debloat.txt        # undo it, restore stock launcher
-```
-
-### Gotchas we hit
-
-- **macOS: `adb connect` says "No route to host"** while the port is clearly open. Recent macOS
-  treats the Google-signed `adb` as its own app under Local Network privacy and silently blocks it.
-  `tools/tv.py` avoids the binary entirely.
-- **No "wireless debugging" toggle** on some TVs (Xiaomi among them). USB debugging alone opens
-  network ADB on port 5555.
-- **Chained `pm` commands** (`pm disable a; pm disable b`) may silently stop after the first. Run
-  one per shell call; `--batch` does this.
-- **Large pushes hang** through the Python client. Use `tools/b64push.py` for APKs.
-- **Disable the stock launcher only after the new one is installed**, or the Home button lands on
-  a factory test app.
-- **Third-party launchers** often charge for basics like a custom wallpaper. Hence `launcher/`.
-- **No on-screen keyboard** after switching launchers (seen on Xiaomi): the default input method
-  pointed at a Baidu IME that isn't installed. Fix with
-  `tools/tv.py 'ime set com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME'`.
-
-## Supported TVs
-
-Anything running Android TV or Google TV: Xiaomi/Redmi, TCL, Hisense, Sony, OnePlus, Realme,
-Nvidia Shield and most others. Amazon Fire TV works with a workaround for the locked home screen,
-see [`docs/fire-tv.md`](docs/fire-tv.md). Not Samsung Tizen or LG webOS. Tested so far on the models in
-[`examples/`](examples/).
-
-## Contributing
-
-Add your TV's debloat list, improve the launcher, or sharpen the prompt. See
-[CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Licence
-
-MIT, see [`LICENSE`](LICENSE). The Outfit typeface is under the SIL Open Font License, see
-`launcher/FONT-LICENSE-OFL.txt`.
+The full account, including measurements, the upstream contributions and what is still open, is in
+[`docs/what-we-did.md`](docs/what-we-did.md).

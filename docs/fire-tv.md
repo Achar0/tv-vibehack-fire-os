@@ -4,7 +4,7 @@ Fire OS is Android underneath, so the debloat works the same way, but Amazon loc
 Tested on a Fire TV Stick 4K (AFTKM), Fire OS 8.1.8.2 (Android 11), from Linux with the stock `adb`.
 
 <p align="center">
-  <img src="fire-tv-settings.png" alt="Settings overlay on a Fire TV Stick" width="80%">
+  <img src="images/settings-device.jpg" alt="Two-pane Settings on a Fire TV Stick" width="80%">
 </p>
 
 ## What's different from Android TV
@@ -12,8 +12,8 @@ Tested on a Fire TV Stick 4K (AFTKM), Fire OS 8.1.8.2 (Android 11), from Linux w
 | Upstream step | On Fire TV |
 |---|---|
 | `cmd package set-home-activity` + disable the stock launcher | Blocked: `com.amazon.tv.launcher` is a protected package. Instead, the launcher's accessibility service brings it back whenever Amazon's home screen comes to the front (`firetv_home_override` in `config.xml`). |
-| Catching the Home key | Fire OS handles Home before accessibility services see it, so the override reacts to the window instead. Amazon's home may flash for a moment on a double press. The Home key itself is not intercepted. |
-| Opening Fire OS settings | Fire OS opens Settings by briefly showing Amazon's home first. The launcher's System / Wi-Fi / Apps buttons tell the service to let that one pass through. Settings opened from other apps may bounce back to the launcher. |
+| Catching the Home key | Fire OS handles Home before accessibility services see it (a key-logging build confirmed it: D-pad and Back arrive, Home never does), so the override reacts to Amazon's window instead, at once and without a window animation. Amazon's home can still flash for a fraction of a second. |
+| Opening Fire OS settings | Fire OS opens Settings by briefly showing Amazon's home first. The launcher's Settings rows tell the service to let that one pass through; Back from there returns to the launcher's Settings. Settings opened from other apps may bounce back to the launcher. |
 | Inputs tile | A stick has no HDMI/tuner inputs: add `com.gathin.tvhome.inputs` to `hidden_apps`. |
 | `tools/tv.py` | Not needed where the stock `adb` works. The Fire TV scripts use `adb`. |
 
