@@ -48,14 +48,14 @@ Tested on a Fire TV Stick 4K (`AFTKM`), Fire OS 8.1.8.2 (Android 11).
 
 ## Compared with cleanyourtv
 
-cleanyourtv (v3.3, Nov 2026) is the far bigger project: hundreds of TV models, 31 languages, themes and
+cleanyourtv (v3.3, Nov 2026; checked against its code on Nov 4) is the far bigger project: hundreds of TV models, 31 languages, themes and
 add-ons. On Fire TV, though, its README says it does **"the debloat half only, since Fire OS will not hand
 Home to a third-party launcher"**. That missing half is what this version adds.
 
 | | cleanyourtv 3.3 | This version |
 |---|---|---|
 | **Scope** | Any Android / Google TV; Fire TV debloat lists for many models | Fire TV Stick 4K (AFTKM), one owner's setup |
-| **Home on Fire TV** | Not possible, debloat only | Taken over via the accessibility redirect |
+| **Home on Fire TV** | Documented as debloat only. Its generic `stock_home_redirect` (Oct 2026, for XGIMI / TCL / Google TV firmware that turns the stock launcher back on) uses the same window-based idea, but has no Fire OS Settings pass-through or Back handling | Taken over via the accessibility redirect, with Settings pass-through and Back handling |
 | **Home redirect speed** | n/a | Launcher focused ~0.28 s after Amazon's home starts |
 | **Fire OS settings from the launcher** | n/a on Fire TV | Pass-through; Back returns to the Settings panel |
 | **Settings on the TV** | Hold OK on Settings → launcher settings page | Two-pane panel: Device / Appearance / About |
