@@ -79,3 +79,27 @@ Device: Fire TV Stick 4K 2nd gen (AFTKM), Fire OS 8.1.8.2, Android 11
 - **Language** (Settings > Appearance > Language): English, Italiano, 中文, independent of the TV's language; until chosen it follows the TV if that is one of the three. Screensaver date follows it.
 - **Screensaver fallback:** if Fire OS refuses or ignores `screensaver_components`, keep Amazon's screensaver (owner's call), revert the setting, and don't disable Amazon's package.
 - **Open risk:** Chinese needs a CJK system font; check `/system/fonts` in the device session.
+
+## Results (device session, 2026-11-04, AFTKM, Fire OS 8.1.8.2)
+
+- **Installed** release build (747,773 B, R8 + shrunk resources; old debug build 3,555,147 B). Accessibility bound, WRITE_SECURE_SETTINGS granted.
+- **ADB switch:** works for real. `Settings.Global.ADB_ENABLED` write accepted; pressing it dropped the PC's connection and reconnect was refused.
+- **Developer Options fallback** (found with REA `pull_adb_package` + aapt2 manifest dump; REA's class search needed a JADX jar that isn't installed): `com.amazon.tv.settings.v2/.tv.device.DeviceActivity` is exported and handles `android.settings.APPLICATION_DEVELOPMENT_SETTINGS`, landing on Debug ADB. Set in `developer_options_component`.
+- **Screensaver:** Fire OS honours `screensaver_components`; `dumpsys dreams` shows `ClockDream` running. Amazon's package untouched.
+- **Language:** it / zh / en all render; Chinese uses the system CJK font (nothing bundled). Settings reopens on the Language row after the switch.
+- **Functional:** two-pane navigation, value cycling, Fire TV settings and Wi-Fi open; no calendar pill.
+- **Measurements** (old = installed debug build, new = release):
+
+| Metric | Old | New |
+| --- | --- | --- |
+| RAM, fresh process, 40 s on Home (TOTAL PSS) | 84.5 MB | 78.3 MB |
+| Home from Prime Video, `am start -W` hot, median of 5 | 151 ms | 120 ms |
+| Frame time p50 / p90 / p99 (D-pad sweep) | 17 / 26 / 40 ms | 18 / 25 / 29 ms |
+| Janky frames (gfxinfo) | 78.6 % | 79.5 % |
+
+- APK manifest diff (aapt2, in place of REA `compare_application_versions`, which only handles JavaScript graphs): −INTERNET, +WRITE_SECURE_SETTINGS, +dream component, no longer debuggable.
+- **Known, not fixed:**
+  - Returning from Fire TV settings / Wi-Fi lands on Home, not the Settings panel (the Home redirect delivers a new intent, which closes the panel).
+  - After a language switch the old activity's bitmaps sit in native heap until the next GC (seen at 122 MB right after three switches; no static reference holds it).
+  - Graphics memory is ~9 MB higher than the old build on a fresh start.
+  - Reinstalling an older build that lacks WRITE_SECURE_SETTINGS drops the grant; `build-and-install-firetv.sh` re-grants it.
