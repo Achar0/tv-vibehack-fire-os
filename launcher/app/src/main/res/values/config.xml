@@ -38,5 +38,5 @@
 
     <!-- Amazon's Developer Options screen, opened by Settings > Device > ADB debugging when the launcher
          may not switch ADB itself (WRITE_SECURE_SETTINGS not granted). Empty: the standard settings action. -->
-    <string name="developer_options_component" translatable="false"></string>
+    <string name="developer_options_component" translatable="false">com.amazon.tv.settings.v2/.tv.device.DeviceActivity</string>
 </resources>
