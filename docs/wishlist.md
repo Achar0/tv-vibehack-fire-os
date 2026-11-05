@@ -14,6 +14,8 @@ Sorted by what it's worth on this stick (1.7 GB RAM, Fire OS 8) against what it 
 
 ## Worth doing
 
+All seven were built on Nov 5 (see `what-we-did.md`, section 11).
+
 | # | Feature | Who has it | Why | Cost |
 |---|---|---|---|---|
 | 1 | **Shortcut tiles**: a URL or stream opened in a chosen app (TV Bro, VLC) | (planned here) | A favourite site or stream becomes one press | Tiny: config + one intent |

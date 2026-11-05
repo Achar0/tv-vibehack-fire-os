@@ -42,10 +42,24 @@ Tested on a Fire TV Stick 4K (`AFTKM`), Fire OS 8.1.8.2 (Android 11).
 - **Apple TV–style motion**: critically damped springs, a slight tilt toward the D-pad direction,
   press-in on OK. Only transform and opacity are animated, and the TV's animation scale is respected.
 - **Small**: release build with R8 and resource shrinking, **≈ 0.75 MB** (the debug build was 3.6 MB).
-  No INTERNET permission.
+  Network use: only the IPTV picker's playlist download.
 - **Debloat list** for the AFTKM: [`examples/amazon-fire-tv-stick-4k-aftkm/debloat.txt`](examples/amazon-fire-tv-stick-4k-aftkm/debloat.txt).
   - 58 packages, disabled and never uninstalled: the original 21 plus 37 from cleanyourtv's list for the same model.
   - Amazon's own home can't be removed on a locked stick: [why](docs/what-we-did.md#9-can-amazons-home-be-removed-nov-4).
+
+## Since Nov 5
+
+- **Shortcut tiles** (`shortcuts` in `config.xml`): a web page or stream as its own tile, e.g. a web page in TV Bro.
+- **IPTV channel picker**: the IPTV tile (or the remote's TV / Guide button) lists a playlist's channels by group.
+  OK plays in VLC, Right tries the next source, Back from VLC returns to the list.
+- **Tile menu** (hold OK or ☰ on a tile): Move (also changes the dock), Hide, App info, Uninstall.
+  Settings → Appearance → Hidden apps brings hidden tiles back.
+- **Home without Amazon's flash**: the system log triggers the redirect under a black cover.
+  Amazon home → launcher went from a median of 173 ms to 45 ms, at no measurable CPU cost.
+- **Top shelf** (the focused dock app's name in large type), an optional **stats line** (free RAM and storage),
+  and **phone-only apps** you installed.
+- Fixes: stuck on Amazon's home after Wi-Fi + Home, tiles not updating after installs, dock depth, focus after Home.
+- Details: [`docs/what-we-did.md`](docs/what-we-did.md#11-wishlist-and-fixes-nov-5), wishlist status in [`docs/wishlist.md`](docs/wishlist.md).
 
 ## Compared with cleanyourtv
 
@@ -95,7 +109,7 @@ for a maintainer).
 | **Motion** | Duration-based focus animations | Critically damped springs, tilt toward the D-pad direction, press-in on OK; respects the TV's animation scale |
 | **Focus highlight** | Could appear above the dock for a moment on Down from the top bar | Waits until the dock has settled |
 | **Release build** | No shrinking (≈ 3.5 MB) | R8 + resource shrinking, wallpapers recompressed: ≈ 0.75 MB |
-| **Permissions** | Includes INTERNET | No INTERNET; adds WRITE_SECURE_SETTINGS (for the ADB switch, granted by the install script) |
+| **Permissions** | Includes INTERNET | INTERNET only for the IPTV playlist; WRITE_SECURE_SETTINGS (ADB switch) and READ_LOGS (Home without Amazon's flash), both granted by the install script |
 | **Unit tests** | None | 28 JVM tests for the logic (choices, ADB fallbacks, language defaults, Back vs Home, highlight placement) |
 | **Rollback** | `tools/restore*` | Plus [`tools/rollback-firetv.sh`](tools/rollback-firetv.sh) to go back to a saved earlier build |
 

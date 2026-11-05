@@ -172,3 +172,31 @@ The background-restriction test ran twice for 10 minutes each: three Home presse
 - Reinstalling an older build that lacks `WRITE_SECURE_SETTINGS` drops the grant;
   `build-and-install-firetv.sh` re-grants it.
 - Amazon's home can still flash briefly on Home: Fire OS gives apps no earlier signal than its window.
+
+## 11. Wishlist and fixes (Nov 5)
+
+- **Bug hunt** (source review + REA on the APK): 4 bugs fixed and tested on the TV.
+  - Stuck on Amazon's home after Wi-Fi + Home: the settings pass now works once and is rechecked after 0.6 s.
+  - Tiles not updating after an install or removal: the launcher now listens for app changes.
+  - Settings → Dock didn't move a lowered dock.
+  - Focus went nowhere after Home with Settings open.
+  - The manifest audit removed a leftover `usesCleartextTraffic`.
+- **Shortcut tiles and banners**: a web page in TV Bro or a playlist in VLC; banners drawn with ImageMagick, looked up by name.
+- **IPTV**: VLC alone can't pick a channel from a playlist on the TV.
+  - The launcher now has a channel picker. It downloads the playlist (the only network use), merges spelling
+    variants (CCTV1 / CCTV-1), and lists each channel's sources.
+  - VLC needed media access granted once (`pm grant`).
+- **TV / Guide button → channel picker.** On Fire OS 8 the TV key goes to Amazon's Live TV *service* by name, so no app
+  can answer the `livetv://` link (unlike Fire OS 6). The accessibility service catches the key instead. Untested:
+  injected keys don't reach accessibility services.
+- **Tile menu**: hold OK or ☰. ADB can't simulate a long press, or write to the remote's input device (SELinux), so
+  the ☰ route was used to test it.
+- **Home without Amazon's flash.**
+  - Fire OS logs `START … category.HOME … com.amazon.tv.launcher` within ~5 ms of the key.
+  - Following the system log (READ_LOGS) cut Amazon home → launcher from a median of 173 ms to 45 ms, under a black
+    accessibility overlay.
+  - The log reader used 0 ms CPU in 5 minutes idle and 0.6 MB.
+- **Ruled out with REA**: Fire OS 8's `CustomHomeButtonHandler` (`fosservices.jar`) does hand Home to an app that
+  declares `com.amazon.metadata.CUSTOM_HOME` and holds `com.amazon.permission.RECEIVE_CUSTOM_HOME`. But
+  `handleHomeKeyInteractive` only checks the app that is in front, so it can't make a launcher the Home target.
+
