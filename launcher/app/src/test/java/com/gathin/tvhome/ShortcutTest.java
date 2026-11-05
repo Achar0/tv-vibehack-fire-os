@@ -39,4 +39,11 @@ public class ShortcutTest {
         assertEquals(true, Shortcut.parse("IPTV|https://a.org/l.m3u8|channels").opensChannelPicker());
         assertEquals(false, Shortcut.parse("Live|https://a.org|com.phlox.tvwebbrowser").opensChannelPicker());
     }
+
+    @Test public void theTvButtonUsesTheFirstChannelPickerShortcut() {
+        String[] lines = {"Live|https://a.org|com.phlox.tvwebbrowser", "IPTV|https://b.org/l.m3u8|channels",
+                "More|https://c.org/m.m3u8|channels"};
+        assertEquals("https://b.org/l.m3u8", Shortcut.channelPlaylist(lines));
+        assertNull(Shortcut.channelPlaylist(new String[]{"Live|https://a.org|com.a"}));
+    }
 }

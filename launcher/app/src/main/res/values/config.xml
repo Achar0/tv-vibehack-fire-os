@@ -21,6 +21,13 @@
     <!-- Top shelf: the focused app's name in large type above the dock, as on tvOS. -->
     <bool name="show_top_shelf">true</bool>
 
+    <!-- Remote keys that open the IPTV channel picker (the first "channels" shortcut): KEYCODE_TV (170), the Live
+         button, and KEYCODE_GUIDE (172). Checked before remap_media_keys_to_stremio. Empty to leave them to Fire OS. -->
+    <integer-array name="tv_button_keys">
+        <item>170</item>
+        <item>172</item>
+    </integer-array>
+
     <!-- Player app for the IPTV channel picker (shortcut app "channels"). -->
     <string name="iptv_player" translatable="false">org.videolan.vlc</string>
 

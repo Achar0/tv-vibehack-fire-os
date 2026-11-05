@@ -98,6 +98,18 @@ public class TvAccessibilityService extends AccessibilityService {
         if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
             lastBackUp = event.getEventTime();   // same uptime clock as SystemClock.uptimeMillis()
         }
+        if (isTvButton(event.getKeyCode())) {
+            // The remote's TV / Live / Guide button: Fire OS sends it to Amazon's Live TV, which is disabled here.
+            // Open the IPTV channel picker instead, when one is configured.
+            String playlist = Shortcut.channelPlaylist(getResources().getStringArray(R.array.shortcuts));
+            if (playlist == null) return super.onKeyEvent(event);
+            if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
+                Intent i = new Intent(this, ChannelsActivity.class).putExtra(ChannelsActivity.EXTRA_URL, playlist)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                try { startActivity(i); } catch (Exception ignored) {}
+            }
+            return true;
+        }
         if (remapMediaKeys && isPurpleOrMediaKey(event.getKeyCode())) {
             // Consume both down and up, but only if Stremio is there to open.
             Intent stremio = stremioIntent();
@@ -108,6 +120,11 @@ public class TvAccessibilityService extends AccessibilityService {
             return true;
         }
         return super.onKeyEvent(event);
+    }
+
+    private boolean isTvButton(int code) {
+        for (int k : getResources().getIntArray(R.array.tv_button_keys)) if (k == code) return true;
+        return false;
     }
 
     private boolean isPurpleOrMediaKey(int code) {

@@ -28,6 +28,15 @@ final class Shortcut {
         return CHANNEL_PICKER.equals(pkg);
     }
 
+    /** The playlist of the first channel-picker shortcut in {@code lines}, or null: what the remote's TV button opens. */
+    static String channelPlaylist(String[] lines) {
+        for (String line : lines) {
+            Shortcut s = parse(line);
+            if (s != null && s.opensChannelPicker()) return s.uri;
+        }
+        return null;
+    }
+
     /** Drawable used as the tile's banner when the app ships one (res/drawable-nodpi/shortcut_<label>.jpg). */
     String bannerName() {
         return id.replace('.', '_').replace('-', '_');
