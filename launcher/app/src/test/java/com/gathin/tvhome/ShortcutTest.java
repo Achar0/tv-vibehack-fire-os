@@ -1,0 +1,32 @@
+package com.gathin.tvhome;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+
+import org.junit.Test;
+
+public class ShortcutTest {
+    @Test public void webPageInABrowser() {
+        Shortcut s = Shortcut.parse("News|https://example.org/live|com.phlox.tvwebbrowser");
+        assertEquals("News", s.label);
+        assertEquals("https://example.org/live", s.uri);
+        assertEquals("com.phlox.tvwebbrowser", s.pkg);
+        assertNull(s.mime);
+        assertEquals("shortcut.news", s.id);
+    }
+
+    @Test public void playlistWithAType() {
+        Shortcut s = Shortcut.parse(" TV Cina | https://x.org/list.m3u8 | org.videolan.vlc | audio/x-mpegurl ");
+        assertEquals("TV Cina", s.label);
+        assertEquals("audio/x-mpegurl", s.mime);
+        assertEquals("shortcut.tv-cina", s.id);
+    }
+
+    @Test public void urlsMayContainPipesAfterTheThirdFieldOnlyAsType() {
+        assertNull(Shortcut.parse("Live|https://a.org/x"));          // no app
+        assertNull(Shortcut.parse("|https://a.org/x|com.a"));       // no label
+        assertNull(Shortcut.parse("Live||com.a"));                    // no address
+        assertNull(Shortcut.parse("Live|not a uri|com.a"));           // no scheme
+        assertNull(Shortcut.parse(null));
+    }
+}

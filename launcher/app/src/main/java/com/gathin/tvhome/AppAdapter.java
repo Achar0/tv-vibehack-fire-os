@@ -54,6 +54,8 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         final String pkg;
         final Drawable banner;
         final Drawable icon;
+        /** Set for a shortcut tile: what it opens instead of the app's own start screen. */
+        Intent target;
         int ambient;
 
         Entry(String label, ComponentName component, Drawable banner, Drawable icon) {
@@ -104,6 +106,25 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         // TVs without HDMI/tuner inputs (e.g. streaming sticks) can hide this tile via hidden_apps.
         if (!hidden.contains("com.gathin.tvhome.inputs")) fresh.add(new Entry(ctx.getString(R.string.inputs), new ComponentName("com.gathin.tvhome.inputs", "InputsActivity"),
                 ctx.getDrawable(R.drawable.banner_inputs), ctx.getDrawable(R.drawable.ic_input)));
+
+        // Shortcut tiles (config.xml, shortcuts): shown with the target app's icon, skipped when that app is missing.
+        for (String line : ctx.getResources().getStringArray(R.array.shortcuts)) {
+            Shortcut sc = Shortcut.parse(line);
+            if (sc == null || hidden.contains(sc.id)) continue;
+            Drawable appIcon;
+            try {
+                appIcon = pm.getApplicationIcon(sc.pkg);
+            } catch (PackageManager.NameNotFoundException notInstalled) {
+                continue;
+            }
+            Entry e = new Entry(sc.label, new ComponentName(sc.id, sc.pkg), null, appIcon);
+            Intent i = new Intent(Intent.ACTION_VIEW).setPackage(sc.pkg)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (sc.mime != null) i.setDataAndType(Uri.parse(sc.uri), sc.mime);
+            else i.setData(Uri.parse(sc.uri));
+            e.target = i;
+            fresh.add(e);
+        }
 
         // Row 0: Dock Core Apps
         List<Entry> row0 = new ArrayList<>();
@@ -176,7 +197,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             }
         });
         h.card.setOnLongClickListener(v -> {
-            if ("com.gathin.tvhome.inputs".equals(e.pkg)) return true;
+            if ("com.gathin.tvhome.inputs".equals(e.pkg) || e.target != null) return true;
             Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + e.pkg));
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             // Fire OS opens app info via Amazon's home; let the Home override pass it once.
@@ -191,7 +212,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
     }
 
     private void launch(Entry e) {
-        Intent i = new Intent(Intent.ACTION_MAIN)
+        Intent i = e.target != null ? e.target : new Intent(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
                 .setComponent(e.component)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
