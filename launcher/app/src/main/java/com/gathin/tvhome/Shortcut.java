@@ -21,6 +21,13 @@ final class Shortcut {
         this.id = "shortcut." + label.toLowerCase(Locale.ROOT).replaceAll("\\s+", "-");
     }
 
+    /** App name that means "the launcher's own IPTV channel picker" instead of another app. */
+    static final String CHANNEL_PICKER = "channels";
+
+    boolean opensChannelPicker() {
+        return CHANNEL_PICKER.equals(pkg);
+    }
+
     /** Drawable used as the tile's banner when the app ships one (res/drawable-nodpi/shortcut_<label>.jpg). */
     String bannerName() {
         return id.replace('.', '_').replace('-', '_');

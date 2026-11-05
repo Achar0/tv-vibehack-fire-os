@@ -34,4 +34,9 @@ public class ShortcutTest {
         assertEquals("shortcut_news", Shortcut.parse("News|https://a.org|com.a").bannerName());
         assertEquals("shortcut_tv_cina", Shortcut.parse("TV Cina|https://a.org|com.a").bannerName());
     }
+
+    @Test public void channelsMeansTheBuiltInPicker() {
+        assertEquals(true, Shortcut.parse("IPTV|https://a.org/l.m3u8|channels").opensChannelPicker());
+        assertEquals(false, Shortcut.parse("Live|https://a.org|com.phlox.tvwebbrowser").opensChannelPicker());
+    }
 }

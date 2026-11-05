@@ -51,4 +51,10 @@
     <string name="lang_en" translatable="false">English</string>
     <string name="lang_it" translatable="false">Italiano</string>
     <string name="lang_zh" translatable="false">中文</string>
+    <string name="channels_title">Channels</string>
+    <string name="channels_loading">Loading channels…</string>
+    <string name="channels_error">Couldn\'t load the channel list. Check the connection and open it again.</string>
+    <string name="channels_hint">OK plays · Right: next source if one doesn\'t load · Back</string>
+    <string name="channels_other">Other</string>
+    <string name="channels_source">Source %1$d/%2$d</string>
 </resources>

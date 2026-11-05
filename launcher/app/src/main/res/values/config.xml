@@ -16,7 +16,11 @@
 
     <!-- Shortcut tiles: "Label|address|app package|optional type". The address opens straight in that app; the tile
          uses the app's icon and is skipped when the app isn't installed. Put "shortcut.<label in lower case, spaces as
-         dashes>" in dock_apps or hidden_apps to dock or hide one (e.g. shortcut.news). -->
+         dashes>" in dock_apps or hidden_apps to dock or hide one (e.g. shortcut.news). App "channels" opens the
+         address as an IPTV playlist in the launcher's channel picker (played in iptv_player). -->
+    <!-- Player app for the IPTV channel picker (shortcut app "channels"). -->
+    <string name="iptv_player" translatable="false">org.videolan.vlc</string>
+
     <string-array name="shortcuts" translatable="false">
         <!-- Examples (personal ones can go in launcher/app/src/release/res/values/, which git ignores):
         <item>News|https://example.org/live|com.phlox.tvwebbrowser</item>

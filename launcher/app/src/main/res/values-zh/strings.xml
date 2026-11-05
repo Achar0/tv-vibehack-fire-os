@@ -47,4 +47,10 @@
     <string name="settings_language">语言</string>
     <string name="home_date_format">M月d日 EEEE</string>
     <string name="dream_date_format">M月d日 EEEE</string>
+    <string name="channels_title">频道</string>
+    <string name="channels_loading">正在加载频道…</string>
+    <string name="channels_error">无法加载频道列表。请检查网络后重新打开。</string>
+    <string name="channels_hint">OK 播放 · 右键：换下一个源 · 返回</string>
+    <string name="channels_other">其他</string>
+    <string name="channels_source">源 %1$d/%2$d</string>
 </resources>

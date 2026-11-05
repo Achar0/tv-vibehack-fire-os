@@ -5,6 +5,8 @@
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
+    <!-- Only for the IPTV channel picker's playlist download (ChannelsActivity). -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Needed on Android 10 to read the Wi-Fi network name; granted over adb at install time. -->
@@ -40,6 +42,13 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ChannelsActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|fontScale|density"
+            android:screenOrientation="landscape" />
 
         <!-- Screensaver: set as the system one over ADB (settings put secure screensaver_components). -->
         <service

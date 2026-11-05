@@ -47,4 +47,10 @@
     <string name="settings_language">Lingua</string>
     <string name="home_date_format">EEEE d MMMM</string>
     <string name="dream_date_format">EEEE d MMMM</string>
+    <string name="channels_title">Canali</string>
+    <string name="channels_loading">Carico i canali…</string>
+    <string name="channels_error">Impossibile caricare la lista dei canali. Controlla la connessione e riaprila.</string>
+    <string name="channels_hint">OK riproduce · Destra: fonte successiva se una non va · Indietro</string>
+    <string name="channels_other">Altri</string>
+    <string name="channels_source">Fonte %1$d/%2$d</string>
 </resources>

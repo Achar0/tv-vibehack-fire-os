@@ -113,17 +113,21 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             if (sc == null || hidden.contains(sc.id)) continue;
             Drawable appIcon;
             try {
-                appIcon = pm.getApplicationIcon(sc.pkg);
+                appIcon = sc.opensChannelPicker() ? ctx.getApplicationInfo().loadIcon(pm) : pm.getApplicationIcon(sc.pkg);
             } catch (PackageManager.NameNotFoundException notInstalled) {
                 continue;
             }
             int bannerRes = ctx.getResources().getIdentifier(sc.bannerName(), "drawable", ctx.getPackageName());
             Drawable banner = bannerRes != 0 ? ctx.getDrawable(bannerRes) : null;
             Entry e = new Entry(sc.label, new ComponentName(sc.id, sc.pkg), banner, appIcon);
-            Intent i = new Intent(Intent.ACTION_VIEW).setPackage(sc.pkg)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            if (sc.mime != null) i.setDataAndType(Uri.parse(sc.uri), sc.mime);
-            else i.setData(Uri.parse(sc.uri));
+            Intent i;
+            if (sc.opensChannelPicker()) {
+                i = new Intent(ctx, ChannelsActivity.class).putExtra(ChannelsActivity.EXTRA_URL, sc.uri);
+            } else {
+                i = new Intent(Intent.ACTION_VIEW).setPackage(sc.pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                if (sc.mime != null) i.setDataAndType(Uri.parse(sc.uri), sc.mime);
+                else i.setData(Uri.parse(sc.uri));
+            }
             e.target = i;
             fresh.add(e);
         }

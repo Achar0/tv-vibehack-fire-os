@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/SettingsRow">
+
+    <TextView
+        android:id="@+id/channelName"
+        style="@style/SettingsRowLabel"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/channelSource"
+        style="@style/SettingsRowValue" />
+</LinearLayout>
