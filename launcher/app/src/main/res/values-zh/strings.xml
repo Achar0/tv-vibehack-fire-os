@@ -55,4 +55,12 @@
     <string name="channels_source">源 %1$d/%2$d</string>
     <string name="settings_stats">系统信息</string>
     <string name="stats_line">可用内存 %1$s · 存储 %2$s</string>
+    <string name="tile_move">移动</string>
+    <string name="tile_hide">隐藏</string>
+    <string name="tile_info">应用信息</string>
+    <string name="tile_uninstall">卸载</string>
+    <string name="tile_move_hint">方向键移动 · OK 或返回键放下</string>
+    <string name="settings_hidden">已隐藏的应用</string>
+    <string name="settings_hidden_none">无</string>
+    <string name="settings_hidden_count">%d 个 · OK 恢复显示</string>
 </resources>

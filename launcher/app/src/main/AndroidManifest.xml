@@ -8,6 +8,8 @@
     <!-- Only for the IPTV channel picker's playlist download (ChannelsActivity). -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Uninstall from the tile menu (asks for confirmation through the system installer). -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Needed on Android 10 to read the Wi-Fi network name; granted over adb at install time. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />

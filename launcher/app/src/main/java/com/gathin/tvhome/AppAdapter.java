@@ -4,6 +4,7 @@ import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -31,6 +32,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Set;
 
@@ -47,6 +50,9 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         boolean onTileVerticalKey(int position, int keyCode);
 
         void onInputsTileClicked();
+
+        /** Hold OK on a tile: Move, Hide, App info, Uninstall. */
+        void onTileMenu(int position);
     }
 
     static final class Entry {
@@ -59,6 +65,8 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         Intent target;
         /** A phone-only app (no TV launcher entry): long-press still opens its App info. */
         boolean phoneApp;
+        /** Shipped with Fire OS: can't be uninstalled. */
+        boolean system;
         int ambient;
 
         Entry(String label, ComponentName component, Drawable banner, Drawable icon) {
@@ -104,7 +112,9 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             if (banner == null) banner = ri.activityInfo.applicationInfo.loadBanner(pm);
             Drawable icon = ri.loadIcon(pm);
             String label = String.valueOf(ri.loadLabel(pm));
-            fresh.add(new Entry(label, new ComponentName(pkg, ri.activityInfo.name), banner, icon));
+            Entry app = new Entry(label, new ComponentName(pkg, ri.activityInfo.name), banner, icon);
+            app.system = (ri.activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+            fresh.add(app);
         }
         // Phone-only apps you installed (no LEANBACK_LAUNCHER entry, e.g. from Aurora Store): shown with their icon.
         // Fire OS's own phone entries (Appstore, profile picker, screensaver...) are system apps and stay out.
@@ -181,9 +191,17 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             otherApps.add(0, row0.remove(row0.size() - 1));
         }
 
+        // Your own order (Move) and hidden tiles (Hide) win over config.xml.
+        SharedPreferences prefs = ctx.getSharedPreferences("tvhome_prefs", Context.MODE_PRIVATE);
+        Set<String> userHidden = prefs.getStringSet(PREF_HIDDEN, Collections.emptySet());
+        Map<String, Entry> byId = new LinkedHashMap<>();
+        for (Entry e : row0) if (!userHidden.contains(e.pkg)) byId.put(e.pkg, e);
+        for (Entry e : otherApps) if (!userHidden.contains(e.pkg)) byId.put(e.pkg, e);
         items.clear();
-        items.addAll(row0);
-        items.addAll(otherApps);
+        for (String id : TileOrder.apply(new ArrayList<>(byId.keySet()),
+                TileOrder.decode(prefs.getString(PREF_ORDER, null)))) {
+            items.add(byId.get(id));
+        }
         notifyDataSetChanged();
     }
 
@@ -228,16 +246,8 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             }
         });
         h.card.setOnLongClickListener(v -> {
-            if ("com.gathin.tvhome.inputs".equals(e.pkg) || (e.target != null && !e.phoneApp)) return true;
-            Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + e.pkg));
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            // Fire OS opens app info via Amazon's home; let the Home override pass it once.
-            TvAccessibilityService.letAmazonHomeThrough();
-            try {
-                ctx.startActivity(i);
-            } catch (ActivityNotFoundException | SecurityException ignored) {
-                TvAccessibilityService.cancelAmazonHomeThrough();
-            }
+            int pos = h.getBindingAdapterPosition();
+            if (listener != null && pos != RecyclerView.NO_POSITION) listener.onTileMenu(pos);
             return true;
         });
     }
@@ -252,6 +262,43 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         } catch (Exception ex) {
             Toast.makeText(ctx, ctx.getString(R.string.cant_open, e.label), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    static final String PREF_ORDER = "tile_order", PREF_HIDDEN = "hidden_tiles";
+
+    /** A real app (not a shortcut or the Inputs tile): App info applies. */
+    boolean isApp(int position) {
+        Entry e = items.get(position);
+        return !"com.gathin.tvhome.inputs".equals(e.pkg) && (e.target == null || e.phoneApp);
+    }
+
+    boolean canUninstall(int position) {
+        return isApp(position) && !items.get(position).system;
+    }
+
+    String packageAt(int position) {
+        return items.get(position).pkg;
+    }
+
+    /** Move mode: the tile at {@code from} goes to {@code to}; saved right away. */
+    void moveItem(int from, int to) {
+        if (from == to || from < 0 || to < 0 || from >= items.size() || to >= items.size()) return;
+        items.add(to, items.remove(from));
+        notifyItemMoved(from, to);
+        List<String> ids = new ArrayList<>();
+        for (Entry e : items) ids.add(e.pkg);
+        ctx.getSharedPreferences("tvhome_prefs", Context.MODE_PRIVATE).edit()
+                .putString(PREF_ORDER, TileOrder.encode(ids)).apply();
+    }
+
+    /** Hide: the tile goes away until Settings > Appearance > Hidden apps shows them again. */
+    void hide(int position) {
+        SharedPreferences p = ctx.getSharedPreferences("tvhome_prefs", Context.MODE_PRIVATE);
+        Set<String> hiddenNow = new HashSet<>(p.getStringSet(PREF_HIDDEN, Collections.emptySet()));
+        hiddenNow.add(items.get(position).pkg);
+        p.edit().putStringSet(PREF_HIDDEN, hiddenNow).apply();
+        items.remove(position);
+        notifyItemRemoved(position);
     }
 
     /** A phone-only launcher entry becomes a tile when you installed it and it isn't already a TV tile. */
@@ -353,6 +400,12 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
                 // Press-in on OK: the tile sinks on key-down and comes back on key-up (the click still fires).
                 if (Motion.isSelect(keyCode)) return Motion.handlePress(view, keyCode, event, FOCUS_SCALE);
                 if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+                if (keyCode == KeyEvent.KEYCODE_MENU) {
+                    // The remote's ☰ button opens the tile menu too (Fire TV's usual "options" key).
+                    int p = getBindingAdapterPosition();
+                    if (listener != null && p != RecyclerView.NO_POSITION) listener.onTileMenu(p);
+                    return true;
+                }
                 if (keyCode != KeyEvent.KEYCODE_DPAD_UP && keyCode != KeyEvent.KEYCODE_DPAD_DOWN) return false;
                 int pos = getBindingAdapterPosition();
                 return listener != null && pos != RecyclerView.NO_POSITION && listener.onTileVerticalKey(pos, keyCode);

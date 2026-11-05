@@ -237,6 +237,120 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         showInputs();
     }
 
+    // ---- tile menu & move mode -------------------------------------------------------------------
+
+    /** Position of the tile being moved, or -1. */
+    private int movingPos = -1;
+    /** The OK / Back that ended Move mode: its key-up must not click the tile or go back. */
+    private int swallowUpOf;
+
+    @Override
+    public void onTileMenu(int position) {
+        View panel = getLayoutInflater().inflate(R.layout.popup_tile_menu, root, false);
+        LinearLayout rows = panel.findViewById(R.id.menuRows);
+        final PopupWindow popup = new PopupWindow(panel, ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));   // needed for Back to dismiss
+        popup.setAnimationStyle(0);
+        addMenuRow(rows, popup, R.string.tile_move, () -> startMove(position));
+        addMenuRow(rows, popup, R.string.tile_hide, () -> {
+            adapter.hide(position);
+            focusAfterLayout(Math.min(position, adapter.getItemCount() - 1));
+        });
+        if (adapter.isApp(position)) {
+            String pkg = adapter.packageAt(position);
+            addMenuRow(rows, popup, R.string.tile_info, () -> tryOpen(new Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:" + pkg))));
+            if (adapter.canUninstall(position)) {
+                addMenuRow(rows, popup, R.string.tile_uninstall, () -> open(new Intent(
+                        Intent.ACTION_DELETE, android.net.Uri.parse("package:" + pkg))));
+            }
+        }
+        panel.setAlpha(0f);
+        panel.setScaleX(0.96f);
+        panel.setScaleY(0.96f);
+        popup.showAtLocation(root, Gravity.CENTER, 0, 0);
+        panel.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(180).setInterpolator(Motion.EASE_OUT).start();
+        rows.getChildAt(0).requestFocus();
+    }
+
+    private void addMenuRow(LinearLayout rows, PopupWindow popup, int text, Runnable action) {
+        TextView row = (TextView) getLayoutInflater().inflate(R.layout.item_menu_row, rows, false);
+        row.setText(text);
+        row.setOnFocusChangeListener((v, has) -> Motion.focus(v, has, 1.03f, 4 * density, false));
+        row.setOnClickListener(v -> {
+            popup.dismiss();
+            action.run();
+        });
+        rows.addView(row);
+    }
+
+    /**
+     * After tiles moved or went away: once the grid has laid them out again, focus the tile at {@code pos} and put
+     * the highlight on it. A tile that keeps focus gets no focus change, so the highlight is placed explicitly.
+     */
+    private void focusAfterLayout(int pos) {
+        grid.getViewTreeObserver().addOnGlobalLayoutListener(new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                grid.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                RecyclerView.ViewHolder vh = grid.findViewHolderForAdapterPosition(pos);
+                View card = vh != null ? vh.itemView.findViewById(R.id.card) : null;
+                if (card != null && card.isFocused()) onTileFocused(pos, card);
+                else focusTile(pos);
+                dimForMove();
+            }
+        });
+        grid.requestLayout();
+    }
+
+    private void startMove(int position) {
+        movingPos = position;
+        Toast.makeText(this, R.string.tile_move_hint, Toast.LENGTH_LONG).show();
+        grid.post(this::dimForMove);
+    }
+
+    /** While moving, the other tiles dim so the carried one stands out. */
+    private void dimForMove() {
+        for (int i = 0; i < grid.getChildCount(); i++) {
+            View child = grid.getChildAt(i);
+            int pos = grid.getChildAdapterPosition(child);
+            child.animate().alpha(movingPos < 0 || pos == movingPos ? 1f : 0.4f).setDuration(150).start();
+        }
+    }
+
+    /** Move mode keys: arrows carry the tile, OK or Back puts it down. True when handled. */
+    private boolean handleMoveKey(KeyEvent event) {
+        int k = event.getKeyCode();
+        if (event.getAction() == KeyEvent.ACTION_UP && swallowUpOf == k) {
+            swallowUpOf = 0;
+            return true;
+        }
+        if (movingPos < 0) return false;
+        if (event.getAction() != KeyEvent.ACTION_DOWN) return true;
+        int dx = 0, dy = 0;
+        switch (k) {
+            case KeyEvent.KEYCODE_DPAD_LEFT: dx = -1; break;
+            case KeyEvent.KEYCODE_DPAD_RIGHT: dx = 1; break;
+            case KeyEvent.KEYCODE_DPAD_UP: dy = -1; break;
+            case KeyEvent.KEYCODE_DPAD_DOWN: dy = 1; break;
+            default:
+                if (Motion.isSelect(k) || k == KeyEvent.KEYCODE_BACK) {
+                    movingPos = -1;
+                    swallowUpOf = k;
+                    dimForMove();
+                }
+                return true;
+        }
+        int to = TileOrder.target(movingPos, COLUMNS, adapter.getItemCount(), dx, dy);
+        if (to != movingPos) {
+            adapter.moveItem(movingPos, to);
+            movingPos = to;
+            focusAfterLayout(to);
+        }
+        return true;
+    }
+
     private boolean isInitialLaunch = true;
     /** Just recreated by a language change: open Settings again on the Language row. */
     private boolean reopenLanguage;
@@ -347,6 +461,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
                 Motion.onDirectionKey(k);   // the next focused tile leans this way
             }
         }
+        if (handleMoveKey(event)) return true;
         if (trapFocusInOverlay(event)) return true;
         return super.dispatchKeyEvent(event);
     }
@@ -559,6 +674,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         }
         stats.setText(Stats.line(this));
         stats.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public int hiddenCount() {
+        return getSharedPreferences("tvhome_prefs", MODE_PRIVATE)
+                .getStringSet(AppAdapter.PREF_HIDDEN, Collections.emptySet()).size();
+    }
+
+    @Override
+    public void showHiddenApps() {
+        getSharedPreferences("tvhome_prefs", MODE_PRIVATE).edit().remove(AppAdapter.PREF_HIDDEN).apply();
+        adapter.reload();
     }
 
     @Override

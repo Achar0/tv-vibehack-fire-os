@@ -55,4 +55,12 @@
     <string name="channels_source">Fonte %1$d/%2$d</string>
     <string name="settings_stats">Statistiche</string>
     <string name="stats_line">RAM libera %1$s · spazio %2$s</string>
+    <string name="tile_move">Sposta</string>
+    <string name="tile_hide">Nascondi</string>
+    <string name="tile_info">Info app</string>
+    <string name="tile_uninstall">Disinstalla</string>
+    <string name="tile_move_hint">Le frecce spostano il riquadro · OK o Indietro per lasciarlo</string>
+    <string name="settings_hidden">App nascoste</string>
+    <string name="settings_hidden_none">Nessuna</string>
+    <string name="settings_hidden_count">%d · OK le mostra</string>
 </resources>

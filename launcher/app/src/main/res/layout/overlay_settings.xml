@@ -214,7 +214,6 @@
                     <LinearLayout
                         android:id="@+id/rowStats"
                         style="@style/SettingsRow"
-                        android:nextFocusDown="@id/rowStats"
                         android:nextFocusLeft="@id/catAppearance"
                         android:nextFocusRight="@id/rowStats">
 
@@ -224,6 +223,22 @@
 
                         <TextView
                             android:id="@+id/valStats"
+                            style="@style/SettingsRowValue" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/rowHidden"
+                        style="@style/SettingsRow"
+                        android:nextFocusDown="@id/rowHidden"
+                        android:nextFocusLeft="@id/catAppearance"
+                        android:nextFocusRight="@id/rowHidden">
+
+                        <TextView
+                            style="@style/SettingsRowLabel"
+                            android:text="@string/settings_hidden" />
+
+                        <TextView
+                            android:id="@+id/valHidden"
                             style="@style/SettingsRowValue" />
                     </LinearLayout>
 
