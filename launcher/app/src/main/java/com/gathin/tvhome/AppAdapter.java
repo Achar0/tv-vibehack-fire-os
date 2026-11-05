@@ -4,6 +4,7 @@ import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
@@ -56,6 +57,8 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         final Drawable icon;
         /** Set for a shortcut tile: what it opens instead of the app's own start screen. */
         Intent target;
+        /** A phone-only app (no TV launcher entry): long-press still opens its App info. */
+        boolean phoneApp;
         int ambient;
 
         Entry(String label, ComponentName component, Drawable banner, Drawable icon) {
@@ -103,6 +106,28 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             String label = String.valueOf(ri.loadLabel(pm));
             fresh.add(new Entry(label, new ComponentName(pkg, ri.activityInfo.name), banner, icon));
         }
+        // Phone-only apps you installed (no LEANBACK_LAUNCHER entry, e.g. from Aurora Store): shown with their icon.
+        // Fire OS's own phone entries (Appstore, profile picker, screensaver...) are system apps and stay out.
+        Set<String> seen = new HashSet<>();
+        for (Entry e : fresh) seen.add(e.pkg);
+        Intent phone = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+        for (ResolveInfo ri : pm.queryIntentActivities(phone, 0)) {
+            if (ri.activityInfo == null) continue;
+            String pkg = ri.activityInfo.packageName;
+            int flags = ri.activityInfo.applicationInfo.flags;
+            if (pkg.equals(ctx.getPackageName()) || hidden.contains(pkg)) continue;
+            if (!showPhoneApp((flags & ApplicationInfo.FLAG_SYSTEM) != 0, seen.contains(pkg),
+                    (flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0)) continue;
+            seen.add(pkg);
+            Entry e = new Entry(String.valueOf(ri.loadLabel(pm)), new ComponentName(pkg, ri.activityInfo.name),
+                    null, ri.loadIcon(pm));
+            e.target = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+                    .setComponent(e.component)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+            e.phoneApp = true;
+            fresh.add(e);
+        }
+
         // TVs without HDMI/tuner inputs (e.g. streaming sticks) can hide this tile via hidden_apps.
         if (!hidden.contains("com.gathin.tvhome.inputs")) fresh.add(new Entry(ctx.getString(R.string.inputs), new ComponentName("com.gathin.tvhome.inputs", "InputsActivity"),
                 ctx.getDrawable(R.drawable.banner_inputs), ctx.getDrawable(R.drawable.ic_input)));
@@ -203,7 +228,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             }
         });
         h.card.setOnLongClickListener(v -> {
-            if ("com.gathin.tvhome.inputs".equals(e.pkg) || e.target != null) return true;
+            if ("com.gathin.tvhome.inputs".equals(e.pkg) || (e.target != null && !e.phoneApp)) return true;
             Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + e.pkg));
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             // Fire OS opens app info via Amazon's home; let the Home override pass it once.
@@ -227,6 +252,11 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         } catch (Exception ex) {
             Toast.makeText(ctx, ctx.getString(R.string.cant_open, e.label), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    /** A phone-only launcher entry becomes a tile when you installed it and it isn't already a TV tile. */
+    static boolean showPhoneApp(boolean system, boolean alreadyShown, boolean updatedSystem) {
+        return !system && !updatedSystem && !alreadyShown;
     }
 
     /** Rebuild the tiles when there are none yet or an app was installed, removed or changed. */
