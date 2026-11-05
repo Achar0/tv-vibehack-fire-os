@@ -202,6 +202,11 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         }
     }
 
+    /** Rebuild the tiles when there are none yet or an app was installed, removed or changed. */
+    static boolean needsReload(int count, boolean appsChanged) {
+        return count == 0 || appsChanged;
+    }
+
     @Override
     public int getItemCount() {
         return items.size();

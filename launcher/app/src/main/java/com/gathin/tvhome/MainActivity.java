@@ -2,8 +2,10 @@ package com.gathin.tvhome;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Rect;
@@ -86,6 +88,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
     private boolean glassShown;
     private int lastFocused = 0;
     private float density;
+    /** An app was installed, removed or changed since the tiles were built (packageWatcher). */
+    private boolean appsChanged;
+    private final BroadcastReceiver packageWatcher = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            appsChanged = true;
+        }
+    };
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable minuteTick = new Runnable() {
@@ -134,6 +144,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
                 AnimationUtils.loadAnimation(this, R.anim.tile_enter), 0.06f));
         adapter = new AppAdapter(this, this, COLUMNS);
         grid.setAdapter(adapter);
+        // Installs and removals (Aurora Store, TV Bro, adb) change the tiles; rebuilt on the next resume.
+        IntentFilter pkgs = new IntentFilter();
+        pkgs.addAction(Intent.ACTION_PACKAGE_ADDED);
+        pkgs.addAction(Intent.ACTION_PACKAGE_REMOVED);
+        pkgs.addAction(Intent.ACTION_PACKAGE_CHANGED);
+        pkgs.addDataScheme("package");
+        registerReceiver(packageWatcher, pkgs);
 
         // tvOS layout: 2-row dock sits at the bottom, giving maximum space for the wallpaper above.
         grid.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
@@ -230,9 +247,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         heroName.setAlpha(0f);
         ambient.setAlpha(0f);
 
-        if (adapter.getItemCount() == 0) {
+        if (AppAdapter.needsReload(adapter.getItemCount(), appsChanged)) {
+            boolean first = adapter.getItemCount() == 0;
+            appsChanged = false;
             adapter.reload();
-            grid.scheduleLayoutAnimation();
+            if (first) grid.scheduleLayoutAnimation();
         }
 
         updateGreeting();
@@ -265,6 +284,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
     protected void onPause() {
         super.onPause();
         handler.removeCallbacks(minuteTick);
+    }
+
+    @Override
+    protected void onDestroy() {
+        unregisterReceiver(packageWatcher);
+        handler.removeCallbacks(minuteTick);
+        super.onDestroy();
     }
 
     /** The Settings overlay when it is on screen, or null. */
@@ -352,9 +378,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
     }
 
     private void setDockPeek(boolean peek, boolean animate) {
-        if (isDockPeeking == peek && !dockSpring.isRunning()) return;
-        isDockPeeking = peek;
         final float targetY = peek ? peekOffset : 0f;
+        if (!DockGlass.dockNeedsMove(isDockPeeking == peek, dockSpring.isRunning(), grid.getTranslationY(), targetY)) {
+            return;
+        }
+        isDockPeeking = peek;
         if (peek) {
             grid.scrollToPosition(0);
         }
@@ -364,7 +392,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
             onDockSettled();
             return;
         }
-        if (!dockSpring.isRunning() && Math.abs(grid.getTranslationY() - targetY) < 1f) return;
         dockSpring.animateToFinalPosition(targetY);
     }
 
@@ -728,7 +755,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         super.onNewIntent(intent);
         if (settingsPanel == null) return;
         boolean viaBack = intent.getBooleanExtra(HomeReturn.EXTRA_VIA_BACK, false);
-        if (!HomeReturn.keepSettings(viaBack, settingsPanel.openedSystemScreen())) settingsPanel.hide(false);
+        boolean wasShowing = settingsPanel.isShowing();
+        if (!HomeReturn.keepSettings(viaBack, settingsPanel.openedSystemScreen())) {
+            settingsPanel.hide(false);
+            // The focused row just went away with the panel: start from the top bar, as after a fresh start.
+            if (wasShowing) {
+                View btn = findViewById(R.id.btnWifi);
+                if (btn != null) btn.requestFocus();
+            }
+        }
         settingsPanel.clearOpenedSystemScreen();
     }
 

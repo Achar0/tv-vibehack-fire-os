@@ -19,4 +19,12 @@ final class DockGlass {
     static float top(float tileCenterY, float glassHeight) {
         return tileCenterY - glassHeight / 2f;
     }
+
+    /**
+     * True when the dock has to move: its peek state changes, its spring is running, or it isn't at its target
+     * (Settings > Dock changed the target while the dock was already lowered).
+     */
+    static boolean dockNeedsMove(boolean sameState, boolean moving, float y, float target) {
+        return !sameState || moving || Math.abs(y - target) >= 1f;
+    }
 }

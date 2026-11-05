@@ -31,8 +31,8 @@ public class TvAccessibilityService extends AccessibilityService {
     // letAmazonHomeThrough(), so that one pass isn't redirected. Every other appearance of Amazon's
     // home is redirected at once, without a window animation, so it barely shows. (Fire OS keeps the
     // Home key itself from accessibility services, so its window appearing is the earliest signal.)
-    private static final long LET_THROUGH_MAX_MS = 3000;
-    private static volatile long letThroughUntil = 0;
+    /** Touched from the launcher's main thread and the service's, which are the same thread. */
+    private static final LetThrough letThrough = new LetThrough();
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean homeOverride;
@@ -44,21 +44,17 @@ public class TvAccessibilityService extends AccessibilityService {
     private long amazonHomeAt;
 
     private final Runnable redirectIfStillAmazonHome = () -> {
-        if (isAmazonHome(frontWindow) && !lettingThrough()) goHome();
+        if (isAmazonHome(frontWindow)) goHome();
     };
 
     /** Called by the launcher right before it opens a system settings screen. */
     static void letAmazonHomeThrough() {
-        letThroughUntil = SystemClock.uptimeMillis() + LET_THROUGH_MAX_MS;
+        letThrough.arm(SystemClock.uptimeMillis());
     }
 
     /** The start that armed letAmazonHomeThrough() failed: redirect Amazon's home again right away. */
     static void cancelAmazonHomeThrough() {
-        letThroughUntil = 0;
-    }
-
-    private static boolean lettingThrough() {
-        return SystemClock.uptimeMillis() < letThroughUntil;
+        letThrough.cancel();
     }
 
     @Override
@@ -76,14 +72,17 @@ public class TvAccessibilityService extends AccessibilityService {
         if (pkg == null || cls == null) return;
         // Ignore non-activity windows (toasts, dialogs): they keep the previous front window.
         if (!cls.toString().contains(".")) return;
+        String previous = frontWindow;
         frontWindow = pkg + "/" + cls;
         // An Amazon settings screen has arrived: the let-through pass is used up. (Fire OS first
         // shows an invisible helper from com.amazon.tv.settings.v2, which must not count.)
-        if (frontWindow.startsWith(AMAZON_LAUNCHER + "/") && frontWindow.contains("Settings")) letThroughUntil = 0;
+        if (frontWindow.startsWith(AMAZON_LAUNCHER + "/") && frontWindow.contains("Settings")) letThrough.cancel();
+        // A repeated event for the same Amazon home window is the same appearance: keep its pending check.
+        if (isAmazonHome(frontWindow) && frontWindow.equals(previous)) return;
         handler.removeCallbacks(redirectIfStillAmazonHome);
-        if (isAmazonHome(frontWindow) && !lettingThrough()) {
+        if (isAmazonHome(frontWindow)) {
             amazonHomeAt = SystemClock.uptimeMillis();
-            handler.post(redirectIfStillAmazonHome);
+            handler.postDelayed(redirectIfStillAmazonHome, letThrough.redirectDelay(amazonHomeAt));
         }
     }
 
