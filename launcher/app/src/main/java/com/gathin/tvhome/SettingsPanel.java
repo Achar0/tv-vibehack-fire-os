@@ -31,6 +31,8 @@ final class SettingsPanel {
         String language();
         /** Saves the launcher language and rebuilds the screen in it. */
         void setLanguage(String code);
+        boolean showStats();
+        void setShowStats(boolean show);
     }
 
     static final String[] WALLPAPERS = {"auto", "day", "night"};
@@ -52,7 +54,7 @@ final class SettingsPanel {
     private View[] panes;
     /** First row of each pane (About has none). */
     private View[] firstRows;
-    private TextView valWallpaper, valDock, valTopBar, valLanguage, adbState;
+    private TextView valWallpaper, valDock, valTopBar, valLanguage, valStats, adbState;
     /** The no-permission hint is shown once per launcher run. */
     private boolean adbHintShown;
     private int current = -1;
@@ -140,6 +142,7 @@ final class SettingsPanel {
         valDock = find(R.id.valDock);
         valTopBar = find(R.id.valTopBar);
         valLanguage = find(R.id.valLanguage);
+        valStats = find(R.id.valStats);
         adbState = find(R.id.adbState);
 
         for (int i = 0; i < cats.length; i++) {
@@ -164,7 +167,7 @@ final class SettingsPanel {
         // OK sinks the focused row a little on key-down and lifts it back on key-up; the click still fires.
         View.OnKeyListener pressKeys = (v, keyCode, event) -> Motion.handlePress(v, keyCode, event, ROW_SCALE);
         int[] rows = {R.id.rowAdb, R.id.rowFireSettings, R.id.rowWifi, R.id.rowWallpaper, R.id.rowDock, R.id.rowTopBar,
-                R.id.rowLanguage};
+                R.id.rowLanguage, R.id.rowStats};
         for (int id : rows) {
             find(id).setOnFocusChangeListener(rowFocus);
             find(id).setOnKeyListener(pressKeys);
@@ -184,6 +187,10 @@ final class SettingsPanel {
         });
         find(R.id.rowLanguage).setOnClickListener(v ->
                 host.setLanguage(Choices.next(LauncherLocale.CODES, host.language())));
+        find(R.id.rowStats).setOnClickListener(v -> {
+            host.setShowStats(!host.showStats());
+            refreshValues();
+        });
         find(R.id.rowTopBar).setOnClickListener(v -> {
             String next = Choices.next(TOP_BARS, host.topBarShowsText() ? "text" : "icon");
             host.setTopBarStyle("text".equals(next));
@@ -264,6 +271,7 @@ final class SettingsPanel {
         valTopBar.setText(host.topBarShowsText() ? R.string.settings_top_bar_text : R.string.settings_top_bar_icon);
         valLanguage.setText(label(host.language(), LauncherLocale.CODES, new int[]{
                 R.string.lang_en, R.string.lang_it, R.string.lang_zh}));
+        valStats.setText(host.showStats() ? R.string.adb_on : R.string.adb_off);
     }
 
     /** The label for {@code value}, the first one when the value is unknown. */

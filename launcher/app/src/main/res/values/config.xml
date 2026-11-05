@@ -18,6 +18,9 @@
          uses the app's icon and is skipped when the app isn't installed. Put "shortcut.<label in lower case, spaces as
          dashes>" in dock_apps or hidden_apps to dock or hide one (e.g. shortcut.news). App "channels" opens the
          address as an IPTV playlist in the launcher's channel picker (played in iptv_player). -->
+    <!-- Top shelf: the focused app's name in large type above the dock, as on tvOS. -->
+    <bool name="show_top_shelf">true</bool>
+
     <!-- Player app for the IPTV channel picker (shortcut app "channels"). -->
     <string name="iptv_player" translatable="false">org.videolan.vlc</string>
 

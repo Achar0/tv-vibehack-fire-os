@@ -73,6 +73,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
     private int ambientColor;
     private boolean heroShown;
     private TextView greeting;
+    private TextView stats;
     private TextView btnWifi;
     private ImageView wallpaper;
     private int currentWallpaperRes = 0;
@@ -104,6 +105,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
             updateGreeting();
             updateWifiLabel();
             updateWallpaper();
+            updateStats();
             handler.postDelayed(this, MINUTE_MS);
         }
     };
@@ -131,6 +133,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         ambient.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) ->
                 ambientGlow.setGradientRadius((r - l) * 0.62f));
         greeting = findViewById(R.id.greeting);
+        stats = findViewById(R.id.stats);
         btnWifi = findViewById(R.id.btnWifi);
         wallpaper = findViewById(R.id.wallpaper);
         updateWallpaper();
@@ -257,6 +260,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         updateGreeting();
         updateWifiLabel();
         updateWallpaper();
+        updateStats();
         if (settingsPanel != null) {
             settingsPanel.refresh();
             settingsPanel.clearOpenedSystemScreen();   // back in the launcher: that trip is over
@@ -444,14 +448,23 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
             Rect want = new Rect(0, -(int) (12 * density), item.getWidth(), item.getHeight() + (int) (26 * density));
             grid.requestChildRectangleOnScreen(item, want, false);
         }
-        showHero(position, 0f);
+        showHero(position, y);
     }
 
     // ---- top shelf & ambient ---------------------------------------------------------------------
 
-    private void showHero(int position, float dockTopInRoot) {
-        if (heroName != null) {
-            heroName.setVisibility(View.GONE);
+    /** {@code glassTop}: top of the focused tile's highlight in root coordinates, with the dock raised. */
+    private void showHero(int position, float glassTop) {
+        if (heroName != null && getResources().getBoolean(R.bool.show_top_shelf)) {
+            if (position < COLUMNS) {
+                // Top shelf, as on tvOS: the focused dock app's name in large type just above the dock.
+                heroName.setText(adapter.labelAt(position));
+                heroName.setVisibility(View.VISIBLE);
+                heroName.post(() -> heroName.setTranslationY(glassTop - heroName.getHeight() - 14 * density));
+                heroName.animate().alpha(1f).setDuration(220).start();
+            } else {
+                heroName.animate().alpha(0f).setDuration(160).start();
+            }
         }
         int color = adapter.ambientColorAt(position);
         if (!heroShown) {
@@ -473,9 +486,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
     }
 
     private void hideHero() {
-        if (heroName != null) {
-            heroName.setVisibility(View.GONE);
-        }
+        if (heroName != null) heroName.animate().alpha(0f).setDuration(160).start();
         if (!heroShown) return;
         heroShown = false;
         ambient.animate().alpha(0f).setDuration(300).start();
@@ -538,6 +549,27 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         else if (hour < 22) res = R.string.good_evening;
         else res = R.string.good_night;
         greeting.setText(res);
+    }
+
+    /** The optional stats line; only computed while Home is on screen (onResume and the minute tick). */
+    private void updateStats() {
+        if (!showStats()) {
+            stats.setVisibility(View.GONE);
+            return;
+        }
+        stats.setText(Stats.line(this));
+        stats.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public boolean showStats() {
+        return getSharedPreferences("tvhome_prefs", MODE_PRIVATE).getBoolean("show_stats", false);
+    }
+
+    @Override
+    public void setShowStats(boolean show) {
+        getSharedPreferences("tvhome_prefs", MODE_PRIVATE).edit().putBoolean("show_stats", show).apply();
+        updateStats();
     }
 
     private void updateWallpaper() {

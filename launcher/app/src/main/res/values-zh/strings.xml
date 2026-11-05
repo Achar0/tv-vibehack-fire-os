@@ -53,4 +53,6 @@
     <string name="channels_hint">OK 播放 · 右键：换下一个源 · 返回</string>
     <string name="channels_other">其他</string>
     <string name="channels_source">源 %1$d/%2$d</string>
+    <string name="settings_stats">系统信息</string>
+    <string name="stats_line">可用内存 %1$s · 存储 %2$s</string>
 </resources>

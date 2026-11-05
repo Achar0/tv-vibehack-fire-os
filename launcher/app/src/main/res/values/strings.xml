@@ -57,4 +57,6 @@
     <string name="channels_hint">OK plays · Right: next source if one doesn\'t load · Back</string>
     <string name="channels_other">Other</string>
     <string name="channels_source">Source %1$d/%2$d</string>
+    <string name="settings_stats">Stats</string>
+    <string name="stats_line">Free RAM %1$s · storage %2$s</string>
 </resources>

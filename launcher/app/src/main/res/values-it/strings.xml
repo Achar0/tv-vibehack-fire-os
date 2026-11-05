@@ -53,4 +53,6 @@
     <string name="channels_hint">OK riproduce · Destra: fonte successiva se una non va · Indietro</string>
     <string name="channels_other">Altri</string>
     <string name="channels_source">Fonte %1$d/%2$d</string>
+    <string name="settings_stats">Statistiche</string>
+    <string name="stats_line">RAM libera %1$s · spazio %2$s</string>
 </resources>
