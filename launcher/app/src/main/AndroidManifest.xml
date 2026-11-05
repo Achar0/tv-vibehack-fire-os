@@ -18,7 +18,6 @@
         android:icon="@mipmap/ic_launcher"
         android:banner="@drawable/banner"
         android:theme="@style/Theme.TvHome"
-        android:usesCleartextTraffic="true"
         android:allowBackup="false">
 
         <activity
