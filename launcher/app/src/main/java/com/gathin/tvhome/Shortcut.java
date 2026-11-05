@@ -21,6 +21,11 @@ final class Shortcut {
         this.id = "shortcut." + label.toLowerCase(Locale.ROOT).replaceAll("\\s+", "-");
     }
 
+    /** Drawable used as the tile's banner when the app ships one (res/drawable-nodpi/shortcut_<label>.jpg). */
+    String bannerName() {
+        return id.replace('.', '_').replace('-', '_');
+    }
+
     /** The shortcut a config line describes, or null when a field is missing or the address has no scheme. */
     static Shortcut parse(String line) {
         if (line == null) return null;

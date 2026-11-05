@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shortcut banners are looked up by name (Shortcut.bannerName), so resource shrinking must keep them. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@drawable/shortcut_*" />

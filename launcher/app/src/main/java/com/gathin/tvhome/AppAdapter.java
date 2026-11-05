@@ -117,7 +117,9 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             } catch (PackageManager.NameNotFoundException notInstalled) {
                 continue;
             }
-            Entry e = new Entry(sc.label, new ComponentName(sc.id, sc.pkg), null, appIcon);
+            int bannerRes = ctx.getResources().getIdentifier(sc.bannerName(), "drawable", ctx.getPackageName());
+            Drawable banner = bannerRes != 0 ? ctx.getDrawable(bannerRes) : null;
+            Entry e = new Entry(sc.label, new ComponentName(sc.id, sc.pkg), banner, appIcon);
             Intent i = new Intent(Intent.ACTION_VIEW).setPackage(sc.pkg)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             if (sc.mime != null) i.setDataAndType(Uri.parse(sc.uri), sc.mime);

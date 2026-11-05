@@ -29,4 +29,9 @@ public class ShortcutTest {
         assertNull(Shortcut.parse("Live|not a uri|com.a"));           // no scheme
         assertNull(Shortcut.parse(null));
     }
+
+    @Test public void bannerDrawableIsNamedAfterTheShortcut() {
+        assertEquals("shortcut_news", Shortcut.parse("News|https://a.org|com.a").bannerName());
+        assertEquals("shortcut_tv_cina", Shortcut.parse("TV Cina|https://a.org|com.a").bannerName());
+    }
 }
