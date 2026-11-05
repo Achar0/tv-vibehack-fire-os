@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.view.View;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
 
@@ -43,6 +44,14 @@ public class TvAccessibilityService extends AccessibilityService {
     /** When the current Amazon home window appeared. */
     private long amazonHomeAt;
 
+    /** The black cover over Amazon's home while the launcher comes back (log-triggered Home only). */
+    private View cover;
+    private Thread logWatch;
+    private volatile Process logcat;
+    private volatile boolean watching;
+    private static final long COVER_MAX_MS = 1500;
+    private final Runnable hideCover = this::hideCover;
+
     private final Runnable redirectIfStillAmazonHome = () -> {
         if (isAmazonHome(frontWindow)) goHome();
     };
@@ -62,6 +71,83 @@ public class TvAccessibilityService extends AccessibilityService {
         super.onServiceConnected();
         remapMediaKeys = getResources().getBoolean(R.bool.remap_media_keys_to_stremio);
         homeOverride = getResources().getBoolean(R.bool.firetv_home_override) && isInstalled(AMAZON_LAUNCHER);
+        if (homeOverride && checkSelfPermission("android.permission.READ_LOGS") == PackageManager.PERMISSION_GRANTED) {
+            startLogWatch();
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        watching = false;
+        Process p = logcat;
+        if (p != null) p.destroy();
+        hideCover();
+        super.onDestroy();
+    }
+
+    /**
+     * Follows the system log for Amazon's home being started (HomeLog) and reacts at once: black cover, launcher
+     * back. The accessibility window event still follows as before, as the fallback. Restarts the reader if it dies.
+     */
+    private void startLogWatch() {
+        if (watching) return;
+        watching = true;
+        logWatch = new Thread(() -> {
+            while (watching) {
+                try {
+                    logcat = new ProcessBuilder("logcat", "-b", "system", "-v", "brief", "-T", "1",
+                            "ActivityTaskManager:I", "*:S").redirectErrorStream(true).start();
+                    java.io.BufferedReader in = new java.io.BufferedReader(
+                            new java.io.InputStreamReader(logcat.getInputStream()));
+                    String line;
+                    while (watching && (line = in.readLine()) != null) {
+                        if (HomeLog.isAmazonHomeStart(line)) handler.post(this::onAmazonHomeLogged);
+                    }
+                } catch (Exception ignored) {
+                }
+                if (watching) SystemClock.sleep(2000);
+            }
+        }, "home-log");
+        logWatch.setDaemon(true);
+        logWatch.start();
+    }
+
+    private void onAmazonHomeLogged() {
+        long now = SystemClock.uptimeMillis();
+        if (letThrough.isArmed(now)) return;   // a Fire OS settings screen on its way: the window path decides
+        amazonHomeAt = now;
+        showCover();
+        goHome();
+    }
+
+    private void showCover() {
+        handler.removeCallbacks(hideCover);
+        handler.postDelayed(hideCover, COVER_MAX_MS);
+        if (cover != null) return;
+        cover = new View(this);
+        cover.setBackgroundColor(0xFF000000);
+        android.view.WindowManager.LayoutParams lp = new android.view.WindowManager.LayoutParams(
+                android.view.WindowManager.LayoutParams.MATCH_PARENT, android.view.WindowManager.LayoutParams.MATCH_PARENT,
+                android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                        | android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                android.graphics.PixelFormat.OPAQUE);
+        try {
+            ((android.view.WindowManager) getSystemService(WINDOW_SERVICE)).addView(cover, lp);
+        } catch (Exception e) {
+            cover = null;
+        }
+    }
+
+    private void hideCover() {
+        handler.removeCallbacks(hideCover);
+        if (cover == null) return;
+        try {
+            ((android.view.WindowManager) getSystemService(WINDOW_SERVICE)).removeView(cover);
+        } catch (Exception ignored) {
+        }
+        cover = null;
     }
 
     @Override
@@ -74,6 +160,8 @@ public class TvAccessibilityService extends AccessibilityService {
         if (!cls.toString().contains(".")) return;
         String previous = frontWindow;
         frontWindow = pkg + "/" + cls;
+        // The launcher is in front again: lift the cover once its first frame is up.
+        if (cover != null && frontWindow.startsWith(getPackageName() + "/")) handler.postDelayed(hideCover, 80);
         // An Amazon settings screen has arrived: the let-through pass is used up. (Fire OS first
         // shows an invisible helper from com.amazon.tv.settings.v2, which must not count.)
         if (frontWindow.startsWith(AMAZON_LAUNCHER + "/") && frontWindow.contains("Settings")) letThrough.cancel();

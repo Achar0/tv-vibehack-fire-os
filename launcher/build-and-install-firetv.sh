@@ -24,6 +24,7 @@ adb -s "$T" install -r app/build/outputs/apk/release/app-release.apk
 adb -s "$T" shell pm grant com.gathin.tvhome android.permission.ACCESS_FINE_LOCATION || true
 # Settings > Device > ADB debugging switches ADB itself with this; without it the row opens Developer Options.
 adb -s "$T" shell pm grant com.gathin.tvhome android.permission.WRITE_SECURE_SETTINGS || true
+adb -s "$T" shell pm grant com.gathin.tvhome android.permission.READ_LOGS || true   # Home without Amazon's flash (system log)
 # The launcher's clock screensaver instead of Amazon's (Fire OS's own sleep timer still applies after it).
 adb -s "$T" shell settings put secure screensaver_components com.gathin.tvhome/.ClockDream || true
 adb -s "$T" shell settings put secure screensaver_enabled 1 || true

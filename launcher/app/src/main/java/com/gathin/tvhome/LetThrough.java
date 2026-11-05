@@ -20,6 +20,9 @@ final class LetThrough {
 
     void cancel() { until = 0; }
 
+    /** True while the pass is armed, without using it. */
+    boolean isArmed(long now) { return now < until; }
+
     /** Amazon's home just appeared at {@code now}: how long to wait before redirecting it. Uses the pass. */
     long redirectDelay(long now) {
         if (now < until) {
