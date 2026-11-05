@@ -11,8 +11,8 @@ package com.gathin.tvhome;
 final class LetThrough {
     /** How long an armed pass waits for Amazon's home. */
     static final long WINDOW_MS = 3000;
-    /** Amazon's home let through is redirected if nothing replaced it after this long. */
-    static final long RECHECK_MS = 1500;
+    /** Amazon's home let through is redirected if nothing replaced it after this long (Settings replaces it in 0.1-0.3 s). */
+    static final long RECHECK_MS = 600;
 
     private long until;
 
