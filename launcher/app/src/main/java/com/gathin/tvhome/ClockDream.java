@@ -5,16 +5,25 @@ import android.os.Handler;
 import android.os.Looper;
 import android.service.dreams.DreamService;
 import android.view.View;
+import android.view.ViewGroup;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 
 import java.util.Random;
 
 /**
- * Screensaver: the launcher's thin clock and date on black, over a slow ambient glow.
- * Every minute the clock drifts to a new spot and the glow shifts colour, so nothing burns in.
- * No network, no images: cheap enough for a 1 GB TV.
+ * Screensaver: the NAS's /tv page, full-screen. Until it has loaded, and whenever the NAS can't be
+ * reached, the launcher's thin clock and date on black, over a slow ambient glow. Every minute the
+ * clock drifts to a new spot and the glow shifts colour, so nothing burns in.
  */
 public class ClockDream extends DreamService {
 
+    /** The idle page. Plain HTTP to this address only is allowed in network_security_config.xml. */
+    static final String TV_URL = "http://192.168.1.14:3001/tv";
+    private static final long LOAD_TIMEOUT_MS = 10_000L;
     private static final long MOVE_MS = 60_000L;
     /** Deep, low-brightness glow colours; the glow is drawn at partial alpha on black. */
     private static final int[] PALETTE = {0xFF2B5CFF, 0xFF00A39A, 0xFF8A3FFC, 0xFFE0661B, 0xFFD6336C};
@@ -25,6 +34,9 @@ public class ClockDream extends DreamService {
     private View ambient;
     private GradientDrawable glow;
     private int colorIndex;
+    private WebView web;
+
+    private final Runnable giveUpOnPage = this::destroyWeb;
 
     private final Runnable tick = new Runnable() {
         @Override
@@ -68,10 +80,55 @@ public class ClockDream extends DreamService {
             content.animate().alpha(1f).setDuration(1200).start();
         });
         handler.postDelayed(tick, MOVE_MS);
+        loadPage();
+    }
+
+    /** Loads the page behind the clock; it only appears once it has finished loading. */
+    private void loadPage() {
+        web = new WebView(this);
+        web.getSettings().setJavaScriptEnabled(true);
+        web.setBackgroundColor(0xFF000000);
+        web.setFocusable(false);
+        web.setVisibility(View.INVISIBLE);
+        web.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                if (view != web) return;   // already given up
+                handler.removeCallbacks(giveUpOnPage);
+                handler.removeCallbacks(tick);   // the clock is covered: stop moving it
+                setScreenBright(true);
+                view.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if (request.isForMainFrame()) destroyWeb();
+            }
+
+            @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse response) {
+                if (request.isForMainFrame()) destroyWeb();
+            }
+        });
+        ((ViewGroup) content.getParent()).addView(web, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        web.loadUrl(TV_URL);
+        handler.postDelayed(giveUpOnPage, LOAD_TIMEOUT_MS);
+    }
+
+    /** Drops the page, leaving the clock underneath. */
+    private void destroyWeb() {
+        handler.removeCallbacks(giveUpOnPage);
+        if (web == null) return;
+        WebView old = web;
+        web = null;
+        ((ViewGroup) old.getParent()).removeView(old);
+        old.destroy();
     }
 
     @Override
     public void onDreamingStopped() {
+        destroyWeb();
         handler.removeCallbacks(tick);
         if (content != null) content.animate().cancel();
         if (ambient != null) ambient.animate().cancel();
