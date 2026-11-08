@@ -400,6 +400,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
 
     @Override
     protected void onPause() {
+        TvAccessibilityService.rememberLauncher(getWindow().getDecorView());   // what Home shows while Android holds us back
         super.onPause();
         handler.removeCallbacks(minuteTick);
     }

@@ -214,7 +214,8 @@ public class ChannelsActivity extends Activity {
             v.setOnFocusChangeListener((view, has) -> {
                 Motion.focus(view, has, ROW_SCALE, lift, false);
                 int pos = h.getBindingAdapterPosition();
-                if (has && pos != RecyclerView.NO_POSITION) selectGroup(pos, false);
+                // Focus can move during the list's own layout (scrolling to a new row), when changing its rows crashes
+                if (has && pos != RecyclerView.NO_POSITION) groupView.post(() -> selectGroup(pos, false));
             });
             v.setOnKeyListener((view, k, e) -> Motion.handlePress(view, k, e, ROW_SCALE));
             v.setOnClickListener(view -> {
