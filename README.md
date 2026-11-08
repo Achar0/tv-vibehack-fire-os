@@ -27,6 +27,7 @@ Tested on a Fire TV Stick 4K (`AFTKM`), Fire OS 8.1.8.2 (Android 11).
   appears.
   - The switch happens at once, with no window animation. The launcher has focus about 0.28 s after
   Amazon's home starts (was 0.89 s).
+  - Pressing Home makes Android hold every app's start for 5 s. During that wait the launcher shows its last frame over Amazon's home, and remote keys are ignored.
   - Fire OS keeps the Home key itself from apps (checked with a key-logging build: Down, Right and Back
   arrive, Home never does), so Amazon's window appearing is the earliest possible signal.
 - **Fire OS settings still open.** Fire OS opens Settings through Amazon's home, so the launcher lets
@@ -38,7 +39,10 @@ Tested on a Fire TV Stick 4K (`AFTKM`), Fire OS 8.1.8.2 (Android 11).
   - Without that permission, it opens Amazon's Developer Options straight on the Debug ADB row. That
   screen was found by reverse-engineering Amazon's Settings app.
 - **Clock screensaver** replaces Amazon's, using the same idle timer. It shows a page from the home NAS when the NAS can be reached (`ClockDream.TV_URL`), and the clock otherwise.
-- **Phone control**: Settings > Appearance > Phone control shows a QR. The page it opens reorders, renames and hides tiles and types into the field selected on the TV. Local network only, plain HTTP, random code in the address; it stops after 30 idle minutes.
+- **Phone control**: Settings > Appearance > Phone control shows a QR. The page it opens reorders, renames and hides tiles and types into the field selected on the TV, with Amazon's keyboard hidden while the page is open. Local network only, plain HTTP, random code in the address; it stops after 30 idle minutes.
+
+  <img src="docs/images/phone-control.png" width="260" alt="Phone page with a text box and a list of apps with move and hide buttons">
+
 - **Scheduled wake** (off by default): at the time set in `config.xml` the stick wakes the television over HDMI-CEC and opens that page, unless another app is in use. After 90 minutes without a key press it goes back to standby (`WakeSchedule`, `TvPageActivity`).
 - **Launcher language**: English, Italiano, 中文 (Simplified), independent of the TV's language.
 - **Apple TV–style motion**: critically damped springs, a slight tilt toward the D-pad direction,
