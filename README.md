@@ -37,12 +37,13 @@ Tested on a Fire TV Stick 4K (`AFTKM`), Fire OS 8.1.8.2 (Android 11).
   `WRITE_SECURE_SETTINGS`).
   - Without that permission, it opens Amazon's Developer Options straight on the Debug ADB row. That
   screen was found by reverse-engineering Amazon's Settings app.
-- **Clock screensaver** replaces Amazon's, using the same idle timer.
+- **Clock screensaver** replaces Amazon's, using the same idle timer. It shows a page from the home NAS when the NAS can be reached (`ClockDream.TV_URL`), and the clock otherwise.
+- **Scheduled wake** (off by default): at the time set in `config.xml` the stick wakes the television over HDMI-CEC and opens that page, unless another app is in use. After 90 minutes without a key press it goes back to standby (`WakeSchedule`, `TvPageActivity`).
 - **Launcher language**: English, Italiano, 中文 (Simplified), independent of the TV's language.
 - **Apple TV–style motion**: critically damped springs, a slight tilt toward the D-pad direction,
   press-in on OK. Only transform and opacity are animated, and the TV's animation scale is respected.
 - **Small**: release build with R8 and resource shrinking, **≈ 0.75 MB** (the debug build was 3.6 MB).
-  Network use: only the IPTV picker's playlist download.
+  Network use: the IPTV picker's playlist download and the NAS page on the local network.
 - **Debloat list** for the AFTKM: [`examples/amazon-fire-tv-stick-4k-aftkm/debloat.txt`](examples/amazon-fire-tv-stick-4k-aftkm/debloat.txt).
   - 58 packages, disabled and never uninstalled: the original 21 plus 37 from cleanyourtv's list for the same model.
   - Amazon's own home can't be removed on a locked stick: [why](docs/what-we-did.md#9-can-amazons-home-be-removed-nov-4).

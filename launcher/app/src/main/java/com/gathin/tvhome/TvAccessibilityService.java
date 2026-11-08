@@ -66,9 +66,23 @@ public class TvAccessibilityService extends AccessibilityService {
         letThrough.cancel();
     }
 
+    private static TvAccessibilityService running;
+
+    /** The package of the app on screen, or null if the service isn't running. */
+    static String frontPackage() {
+        return running == null ? null : running.frontWindow.split("/", 2)[0];
+    }
+
+    /** Puts the stick to sleep, which turns the television off over HDMI-CEC. */
+    static void standby() {
+        if (running != null) running.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);
+    }
+
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
+        running = this;
+        WakeSchedule.arm(this);   // this runs after every boot and reinstall, so the alarm is never lost
         remapMediaKeys = getResources().getBoolean(R.bool.remap_media_keys_to_stremio);
         homeOverride = getResources().getBoolean(R.bool.firetv_home_override) && isInstalled(AMAZON_LAUNCHER);
         if (homeOverride && checkSelfPermission("android.permission.READ_LOGS") == PackageManager.PERMISSION_GRANTED) {
@@ -78,6 +92,7 @@ public class TvAccessibilityService extends AccessibilityService {
 
     @Override
     public void onDestroy() {
+        running = null;
         watching = false;
         Process p = logcat;
         if (p != null) p.destroy();
@@ -259,6 +274,10 @@ public class TvAccessibilityService extends AccessibilityService {
     }
 
     private void goHome() {
+        if (WakeSchedule.pageWanted()) {   // Amazon's home appeared because the scheduled alarm woke the TV
+            try { startActivity(new Intent(this, TvPageActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) {}
+            return;
+        }
         Intent i = new Intent(this, MainActivity.class);
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
                 | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED | Intent.FLAG_ACTIVITY_NO_ANIMATION);

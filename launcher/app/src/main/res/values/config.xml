@@ -62,4 +62,10 @@
     <!-- Amazon's Developer Options screen, opened by Settings > Device > ADB debugging when the launcher
          may not switch ADB itself (WRITE_SECURE_SETTINGS not granted). Empty: the standard settings action. -->
     <string name="developer_options_component" translatable="false">com.amazon.tv.settings.v2/.tv.device.DeviceActivity</string>
+    <!-- Scheduled wake: at this time the TV turns on and opens the NAS page. wake_hour -1 turns it off.
+         wake_days are java.util.Calendar days (Sunday = 1). Personal values go in launcher/app/src/release/res/values/. -->
+    <integer name="wake_hour">-1</integer>
+    <integer name="wake_minute">0</integer>
+    <integer-array name="wake_days" />
+
 </resources>
