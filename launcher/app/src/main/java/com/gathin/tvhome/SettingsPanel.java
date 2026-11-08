@@ -140,6 +140,11 @@ final class SettingsPanel {
         root = stub.inflate();
         cats = new View[]{find(R.id.catDevice), find(R.id.catAppearance), find(R.id.catAbout)};
         panes = new View[]{find(R.id.paneDevice), find(R.id.paneAppearance), find(R.id.paneAbout)};
+        // The last row is followed by a hint: show it too, as focus alone stops scrolling at the row
+        android.widget.ScrollView appearance = find(R.id.paneAppearance);
+        appearance.getViewTreeObserver().addOnGlobalFocusChangeListener((before, now) -> {
+            if (now != null && now.getId() == R.id.rowPhone) appearance.post(() -> appearance.smoothScrollTo(0, appearance.getChildAt(0).getHeight()));
+        });
         firstRows = new View[]{find(R.id.rowAdb), find(R.id.rowWallpaper), null};
         valWallpaper = find(R.id.valWallpaper);
         valDock = find(R.id.valDock);
@@ -195,6 +200,7 @@ final class SettingsPanel {
             if (host.hiddenCount() > 0) host.showHiddenApps();
             refreshValues();
         });
+        find(R.id.rowPhone).setOnClickListener(v -> activity.startActivity(new android.content.Intent(activity, PhoneLinkActivity.class)));
         find(R.id.rowStats).setOnClickListener(v -> {
             host.setShowStats(!host.showStats());
             refreshValues();

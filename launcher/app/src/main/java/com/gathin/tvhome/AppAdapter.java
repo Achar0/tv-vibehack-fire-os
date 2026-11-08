@@ -31,6 +31,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -56,7 +57,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
     }
 
     static final class Entry {
-        final String label;
+        String label;
         final ComponentName component;
         final String pkg;
         final Drawable banner;
@@ -194,9 +195,16 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         // Your own order (Move) and hidden tiles (Hide) win over config.xml.
         SharedPreferences prefs = ctx.getSharedPreferences("tvhome_prefs", Context.MODE_PRIVATE);
         Set<String> userHidden = prefs.getStringSet(PREF_HIDDEN, Collections.emptySet());
+        Map<String, String> names = PhoneProtocol.decodeNames(prefs.getStringSet(PREF_NAMES, Collections.emptySet()));
         Map<String, Entry> byId = new LinkedHashMap<>();
-        for (Entry e : row0) if (!userHidden.contains(e.pkg)) byId.put(e.pkg, e);
-        for (Entry e : otherApps) if (!userHidden.contains(e.pkg)) byId.put(e.pkg, e);
+        hiddenEntries.clear();
+        List<Entry> everything = new ArrayList<>(row0);
+        everything.addAll(otherApps);
+        for (Entry e : everything) {
+            if (names.containsKey(e.pkg)) e.label = names.get(e.pkg);
+            if (userHidden.contains(e.pkg)) hiddenEntries.add(e);
+            else byId.put(e.pkg, e);
+        }
         items.clear();
         for (String id : TileOrder.apply(new ArrayList<>(byId.keySet()),
                 TileOrder.decode(prefs.getString(PREF_ORDER, null)))) {
@@ -264,7 +272,38 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         }
     }
 
-    static final String PREF_ORDER = "tile_order", PREF_HIDDEN = "hidden_tiles";
+    static final String PREF_ORDER = "tile_order", PREF_HIDDEN = "hidden_tiles", PREF_NAMES = "tile_names";
+    private final List<Entry> hiddenEntries = new ArrayList<>();
+
+    /** Everything the phone page lists: tiles in screen order, then the hidden ones. */
+    List<PhoneProtocol.Tile> phoneTiles() {
+        List<PhoneProtocol.Tile> out = new ArrayList<>();
+        for (Entry e : items) out.add(new PhoneProtocol.Tile(e.pkg, e.label, false));
+        for (Entry e : hiddenEntries) out.add(new PhoneProtocol.Tile(e.pkg, e.label, true));
+        return out;
+    }
+
+    void setPhoneOrder(List<String> ids) {
+        prefs().edit().putString(PREF_ORDER, TileOrder.encode(ids)).apply();
+        reload();
+    }
+
+    void setPhoneHidden(String id, boolean hide) {
+        Set<String> now = new HashSet<>(prefs().getStringSet(PREF_HIDDEN, Collections.emptySet()));
+        if (hide) now.add(id); else now.remove(id);
+        prefs().edit().putStringSet(PREF_HIDDEN, now).apply();
+        reload();
+    }
+
+    void renameTile(String id, String name) {
+        Set<String> now = prefs().getStringSet(PREF_NAMES, Collections.emptySet());
+        prefs().edit().putStringSet(PREF_NAMES, PhoneProtocol.withName(now, id, name)).apply();
+        reload();
+    }
+
+    private SharedPreferences prefs() {
+        return ctx.getSharedPreferences("tvhome_prefs", Context.MODE_PRIVATE);
+    }
 
     /** A real app (not a shortcut or the Inputs tile): App info applies. */
     boolean isApp(int position) {
@@ -297,7 +336,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         Set<String> hiddenNow = new HashSet<>(p.getStringSet(PREF_HIDDEN, Collections.emptySet()));
         hiddenNow.add(items.get(position).pkg);
         p.edit().putStringSet(PREF_HIDDEN, hiddenNow).apply();
-        items.remove(position);
+        hiddenEntries.add(items.remove(position));   // so the phone page can still offer it back
         notifyItemRemoved(position);
     }
 

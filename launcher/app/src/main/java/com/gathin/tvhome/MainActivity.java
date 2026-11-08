@@ -147,6 +147,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
                 AnimationUtils.loadAnimation(this, R.anim.tile_enter), 0.06f));
         adapter = new AppAdapter(this, this, COLUMNS);
         grid.setAdapter(adapter);
+        PhoneServer.setHost(new PhoneServer.Host() {
+            @Override public List<PhoneProtocol.Tile> tiles() { return adapter.phoneTiles(); }
+            @Override public void setOrder(List<String> ids) { adapter.setPhoneOrder(ids); afterPhoneChange(); }
+            @Override public void setHidden(String id, boolean hidden) { adapter.setPhoneHidden(id, hidden); afterPhoneChange(); }
+            @Override public void rename(String id, String name) { adapter.renameTile(id, name); afterPhoneChange(); }
+        });
         // Installs and removals (Aurora Store, TV Bro, adb) change the tiles; rebuilt on the next resume.
         IntentFilter pkgs = new IntentFilter();
         pkgs.addAction(Intent.ACTION_PACKAGE_ADDED);
@@ -304,6 +310,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
         grid.requestLayout();
     }
 
+    /** The phone changed the tiles: a tile being carried no longer sits where we think, and the name above the dock may be old. */
+    private void afterPhoneChange() {
+        if (movingPos >= 0) {
+            movingPos = -1;
+            grid.post(this::dimForMove);
+        }
+        if (hasWindowFocus() && openOverlay() == null && adapter.getItemCount() > 0) {
+            focusAfterLayout(Math.min(lastFocused, adapter.getItemCount() - 1));
+        }
+    }
+
     private void startMove(int position) {
         movingPos = position;
         Toast.makeText(this, R.string.tile_move_hint, Toast.LENGTH_LONG).show();
@@ -409,6 +426,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
     protected void onDestroy() {
         unregisterReceiver(packageWatcher);
         handler.removeCallbacks(minuteTick);
+        PhoneServer.setHost(null);
         super.onDestroy();
     }
 

@@ -9,6 +9,8 @@ import android.os.SystemClock;
 import android.view.View;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.os.Bundle;
 
 /**
  * Remote helpers that need system-wide access. Both are switchable in res/values/config.xml.
@@ -93,6 +95,50 @@ public class TvAccessibilityService extends AccessibilityService {
     /** The package of the app on screen, or null if the service isn't running. */
     static String frontPackage() {
         return running == null ? null : running.frontWindow.split("/", 2)[0];
+    }
+
+    /** Puts the phone's text in the selected field; the answer, as JSON, says whether it was written and submitted. */
+    static String typeText(String text, boolean enter) {
+        AccessibilityService service = running;
+        String notTyped = "{\"typed\":false,\"entered\":false}";
+        if (service == null) return notTyped;
+        AccessibilityNodeInfo field = selectedField(service);
+        if (field == null) return notTyped;
+        Bundle args = new Bundle();
+        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
+        if (!field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) return notTyped;
+        boolean entered = enter && android.os.Build.VERSION.SDK_INT >= 30
+                && field.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.getId());
+        return "{\"typed\":true,\"entered\":" + entered + "}";
+    }
+
+    /** The field to write in. Amazon's keyboard, when open, is a window of its own: it's skipped, not searched. */
+    private static AccessibilityNodeInfo selectedField(AccessibilityService service) {
+        java.util.List<AccessibilityNodeInfo> roots = new java.util.ArrayList<>();
+        for (android.view.accessibility.AccessibilityWindowInfo w : service.getWindows()) {
+            if (w.getType() != android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD && w.getRoot() != null) roots.add(w.getRoot());
+        }
+        for (AccessibilityNodeInfo root : roots) {
+            AccessibilityNodeInfo focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+            if (focused != null && focused.isEditable()) return focused;
+        }
+        // Nothing focused: only when the app on screen has exactly one field is it clearly the one meant
+        AccessibilityNodeInfo active = service.getRootInActiveWindow();
+        java.util.List<AccessibilityNodeInfo> fields = new java.util.ArrayList<>();
+        collectEditable(active, fields);
+        return fields.size() == 1 ? fields.get(0) : null;
+    }
+
+    private static void collectEditable(AccessibilityNodeInfo node, java.util.List<AccessibilityNodeInfo> out) {
+        if (node == null) return;
+        if (node.isEditable()) out.add(node);
+        for (int i = 0; i < node.getChildCount(); i++) collectEditable(node.getChild(i), out);
+    }
+
+    static void hideKeyboard(boolean hide) {
+        TvAccessibilityService service = running;
+        if (service == null) return;
+        service.handler.post(() -> service.getSoftKeyboardController().setShowMode(hide ? SHOW_MODE_HIDDEN : SHOW_MODE_AUTO));
     }
 
     /** Puts the stick to sleep, which turns the television off over HDMI-CEC. */
