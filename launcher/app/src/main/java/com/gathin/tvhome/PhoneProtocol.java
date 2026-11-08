@@ -33,6 +33,26 @@ final class PhoneProtocol {
         return lastSeen != 0 && now - lastSeen < PAGE_GONE_MS;
     }
 
+    /** Runs each send once: the page retries when an answer is lost, and Enter must not fire twice. */
+    static final class Once {
+        private String lastId = "", lastResult = "";
+
+        synchronized String run(String id, java.util.function.Supplier<String> work) {
+            if (!id.isEmpty() && id.equals(lastId)) return lastResult;
+            lastResult = work.get();
+            lastId = id;
+            return lastResult;
+        }
+    }
+
+    /** The address a phone on the same network can reach, among this device's; null if there is none. */
+    static String lanAddress(List<String> addresses) {
+        for (String a : addresses) {
+            if (a.startsWith("192.168.") || a.startsWith("10.") || a.matches("172\\.(1[6-9]|2\\d|3[01])\\..*")) return a;
+        }
+        return null;
+    }
+
     static String path(String target) {
         int q = target.indexOf('?');
         return q < 0 ? target : target.substring(0, q);

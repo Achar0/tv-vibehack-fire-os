@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Color;
-import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.widget.ImageView;
@@ -26,7 +25,6 @@ public class PhoneLinkActivity extends Activity {
     }
 
     @Override
-    @SuppressWarnings("deprecation")   // getConnectionInfo is the way to read this on Android 11's Wi-Fi API
     protected void onCreate(Bundle saved) {
         super.onCreate(saved);
         LinearLayout root = new LinearLayout(this);
@@ -40,13 +38,12 @@ public class PhoneLinkActivity extends Activity {
         hint.setGravity(Gravity.CENTER);
         root.addView(hint);
 
-        String token = PhoneServer.start(this);
-        int ip = ((WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE)).getConnectionInfo().getIpAddress();
-        if (token == null || ip == 0) {
+        String address = address();   // first: without one there's no point opening the port
+        String token = address == null ? null : PhoneServer.start(this);
+        if (token == null) {
             hint.setText(R.string.not_available);
         } else {
-            String url = "http://" + (ip & 255) + "." + (ip >> 8 & 255) + "." + (ip >> 16 & 255) + "." + (ip >>> 24 & 255)
-                    + ":" + PhoneServer.PORT + "/?t=" + token;
+            String url = "http://" + address + ":" + PhoneServer.PORT + "/?t=" + token;
             hint.setText(R.string.phone_scan);
             ImageView qr = new ImageView(this);
             qr.setImageBitmap(qrCode(url));
@@ -55,6 +52,18 @@ public class PhoneLinkActivity extends Activity {
             root.addView(qr, lp);
         }
         setContentView(root);
+    }
+
+    /** Wi-Fi or Ethernet, whichever this TV is on. */
+    private static String address() {
+        java.util.List<String> found = new java.util.ArrayList<>();
+        try {
+            for (java.net.NetworkInterface n : java.util.Collections.list(java.net.NetworkInterface.getNetworkInterfaces())) {
+                for (java.net.InetAddress a : java.util.Collections.list(n.getInetAddresses())) found.add(a.getHostAddress());
+            }
+        } catch (java.net.SocketException ignored) {
+        }
+        return PhoneProtocol.lanAddress(found);
     }
 
     private static Bitmap qrCode(String text) {

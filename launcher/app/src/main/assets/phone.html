@@ -48,14 +48,26 @@ const post = (path, data) => withTimeout(`${path}?t=${encodeURIComponent(t)}`, {
   body: new URLSearchParams(data),
 }).then((r) => r.json());
 
+// Sends are numbered, so the TV ignores a retry of one it already handled
 const postRetrying = (path, data) => post(path, data).catch(() => post(path, data));
+
+// Layout changes go one at a time, in order; if one fails, show the TV's real state again
+let queue = Promise.resolve();
+function change(path, data) {
+  queue = queue.then(() => postRetrying(path, data)).catch(() => {
+    say("修改未送达 · The TV didn't get that change");
+    return load();
+  });
+  return queue;
+}
 
 function say(text) { $("status").textContent = text; }
 
 $("send").onclick = async () => {
   try {
-    const r = await postRetrying("/api/text", { text: $("text").value, enter: 1 });
-    say(r.typed ? "已发送 · Sent" : "没有找到输入框 · No text field selected on the TV");
+    const r = await postRetrying("/api/text", { text: $("text").value, enter: 1, id: `${Date.now()}-${Math.random()}` });
+    say(!r.typed ? "没有找到输入框 · No text field selected on the TV"
+      : r.entered ? "已发送 · Sent" : "已输入，请按遥控器确认 · Typed: press OK on the remote");
     if (r.typed) $("text").value = "";
   } catch { say("连接失败 · Connection lost"); }
 };
@@ -65,7 +77,7 @@ function move(i, by) {
   if (j < 0 || j >= tiles.length) return;
   [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
   draw();
-  post("/api/order", { ids: tiles.map((x) => x.id).join("\n") });
+  change("/api/order", { ids: tiles.map((x) => x.id).join("\n") });
 }
 
 function button(label, action) {
@@ -81,10 +93,10 @@ function draw() {
     row.className = "tile" + (x.hidden ? " off" : "");
     const name = document.createElement("input");
     name.value = x.label;
-    name.onchange = () => { post("/api/rename", { id: x.id, name: name.value }).then(load); };
+    name.onchange = () => { change("/api/rename", { id: x.id, name: name.value }).then(load); };
     row.append(name, button("↑", () => move(i, -1)), button("↓", () => move(i, 1)),
       button(x.hidden ? "显示 Show" : "隐藏 Hide", async () => {
-        await post("/api/hide", { id: x.id, hidden: x.hidden ? 0 : 1 });
+        await change("/api/hide", { id: x.id, hidden: x.hidden ? 0 : 1 });
         load();
       }));
     return row;

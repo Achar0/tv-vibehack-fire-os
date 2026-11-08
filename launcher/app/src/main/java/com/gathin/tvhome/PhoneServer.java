@@ -28,7 +28,9 @@ final class PhoneServer {
     static final int PORT = 8765;
     private static final long IDLE_MS = 30 * 60_000L;
     private static final int MAX_BODY = 64 * 1024;
-    private static final int READ_TIMEOUT_MS = 5_000;
+    private static final int READ_TIMEOUT_MS = 2_000;
+    private static final long REQUEST_DEADLINE_MS = 4_000L;
+    private static final int QUEUED = 12;
     private static final int WORKERS = 6;
 
     /** What the page changes. Always called on the main thread. */
@@ -49,7 +51,10 @@ final class PhoneServer {
     private volatile long lastUsed = System.currentTimeMillis();
     private volatile long pageSeen;
     private boolean keyboardHidden;
-    private final java.util.concurrent.ExecutorService workers = java.util.concurrent.Executors.newFixedThreadPool(WORKERS);
+    private final java.util.concurrent.ThreadPoolExecutor workers = new java.util.concurrent.ThreadPoolExecutor(WORKERS, WORKERS, 0L,
+            java.util.concurrent.TimeUnit.MILLISECONDS, new java.util.concurrent.ArrayBlockingQueue<>(QUEUED));
+    private final PhoneProtocol.Once sends = new PhoneProtocol.Once();
+    private boolean stopped;
 
     static void setHost(Host h) {
         host = h;
@@ -82,8 +87,13 @@ final class PhoneServer {
     }
 
     /** Amazon's on-screen keyboard stays away while the phone is the keyboard. */
+    private synchronized void stop() {
+        updateKeyboard(false);
+        stopped = true;   // a request still being served can't hide the keyboard again with nobody left to undo it
+    }
+
     private synchronized void updateKeyboard(boolean hide) {
-        if (hide == keyboardHidden) return;
+        if (stopped || hide == keyboardHidden) return;
         keyboardHidden = hide;
         TvAccessibilityService.hideKeyboard(hide);
     }
@@ -97,32 +107,39 @@ final class PhoneServer {
     }
 
     private void acceptLoop() {
-        while (System.currentTimeMillis() - lastUsed < IDLE_MS) {
+        while (true) {
+            synchronized (PhoneServer.class) {   // start() can't hand out a server that is on its way out
+                if (System.currentTimeMillis() - lastUsed >= IDLE_MS) {
+                    running = null;
+                    break;
+                }
+            }
             try {
                 Socket client = socket.accept();
-                workers.execute(() -> serve(client));   // a phone that just woke up leaves silent connections behind
+                try {
+                    workers.execute(() -> serve(client));   // a phone that just woke up leaves silent connections behind
+                } catch (java.util.concurrent.RejectedExecutionException full) {
+                    client.close();
+                }
             } catch (SocketTimeoutException idle) {
                 // checks the idle limit
             } catch (IOException | RuntimeException ignored) {   // a bad request must not stop the server
             }
             updateKeyboard(PhoneProtocol.pageOpen(pageSeen, System.currentTimeMillis()));
         }
-        updateKeyboard(false);
+        stop();
         workers.shutdown();
-        synchronized (PhoneServer.class) {
-            running = null;
-        }
         try {
             socket.close();
         } catch (IOException ignored) {
         }
     }
 
-    private static String readLine(InputStream in) throws IOException {
+    private static String readLine(InputStream in, long deadline) throws IOException {
         ByteArrayOutputStream line = new ByteArrayOutputStream();
         int c;
         while ((c = in.read()) >= 0 && c != '\n') {
-            if (line.size() > 8192) throw new IOException("line too long");
+            if (line.size() > 8192 || System.currentTimeMillis() > deadline) throw new IOException("bad request");
             if (c != '\r') line.write(c);
         }
         return line.toString("UTF-8");
@@ -130,24 +147,25 @@ final class PhoneServer {
 
     private void handle(Socket client) throws IOException {
         InputStream in = client.getInputStream();
-        String[] request = readLine(in).split(" ");
+        long deadline = System.currentTimeMillis() + REQUEST_DEADLINE_MS;   // however slowly the bytes trickle in
+        String[] request = readLine(in, deadline).split(" ");
         if (request.length < 2) return;
+        if (!PhoneProtocol.tokenOk(request[1], token)) {
+            respond(client.getOutputStream(), "403 Forbidden", "text/plain", "code required".getBytes(StandardCharsets.UTF_8));
+            return;
+        }
         int length = 0;
-        for (String h = readLine(in); !h.isEmpty(); h = readLine(in)) {
+        for (String h = readLine(in, deadline); !h.isEmpty(); h = readLine(in, deadline)) {
             if (h.toLowerCase().startsWith("content-length:")) length = Integer.parseInt(h.substring(15).trim());
         }
         if (length < 0 || length > MAX_BODY) return;
         byte[] body = new byte[length];
         for (int got = 0; got < length; ) {
             int n = in.read(body, got, length - got);
-            if (n < 0) return;
+            if (n < 0 || System.currentTimeMillis() > deadline) return;
             got += n;
         }
         OutputStream out = client.getOutputStream();
-        if (!PhoneProtocol.tokenOk(request[1], token)) {
-            respond(out, "403 Forbidden", "text/plain", "code required".getBytes(StandardCharsets.UTF_8));
-            return;
-        }
         lastUsed = pageSeen = System.currentTimeMillis();
         updateKeyboard(true);
         route(out, request[0], PhoneProtocol.path(request[1]), PhoneProtocol.form(new String(body, StandardCharsets.UTF_8)));
@@ -161,8 +179,8 @@ final class PhoneServer {
         } else if (method.equals("GET") && path.equals("/api/ping")) {
             json(out, "{\"ok\":true}");
         } else if (method.equals("POST") && path.equals("/api/text")) {
-            boolean typed = TvAccessibilityService.typeText(f.getOrDefault("text", ""), "1".equals(f.get("enter")));
-            json(out, "{\"typed\":" + typed + "}");
+            json(out, sends.run(f.getOrDefault("id", ""),
+                    () -> TvAccessibilityService.typeText(f.getOrDefault("text", ""), "1".equals(f.get("enter")))));
         } else if (method.equals("POST") && path.equals("/api/order")) {
             List<String> ids = new ArrayList<>(Arrays.asList(f.getOrDefault("ids", "").split("\n")));
             change(out, () -> host.setOrder(ids));

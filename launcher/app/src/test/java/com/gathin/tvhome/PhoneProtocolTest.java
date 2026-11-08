@@ -15,6 +15,32 @@ public class PhoneProtocolTest {
     @Test public void keyboardReturnsAfterThePageGoes() { assertFalse(PhoneProtocol.pageOpen(1_000L, 46_000L)); }
     @Test public void noPageSeenYetIsNotOpen()         { assertFalse(PhoneProtocol.pageOpen(0L, 1_000L)); }
 
+    @Test public void aRepeatedSendRunsOnce() {
+        PhoneProtocol.Once once = new PhoneProtocol.Once();
+        int[] runs = {0};
+        assertEquals("r1", once.run("a", () -> "r" + ++runs[0]));
+        assertEquals("r1", once.run("a", () -> "r" + ++runs[0]));
+        assertEquals(1, runs[0]);
+    }
+
+    @Test public void aNewSendRunsAgain() {
+        PhoneProtocol.Once once = new PhoneProtocol.Once();
+        once.run("a", () -> "1");
+        assertEquals("2", once.run("b", () -> "2"));
+    }
+
+    @Test public void aSendWithoutIdAlwaysRuns() {
+        PhoneProtocol.Once once = new PhoneProtocol.Once();
+        once.run("", () -> "1");
+        assertEquals("2", once.run("", () -> "2"));
+    }
+
+    @Test public void onlyAPrivateIpv4AddressIsShown() {
+        assertEquals("192.168.1.10", PhoneProtocol.lanAddress(Arrays.asList("fe80::1", "127.0.0.1", "192.168.1.10")));
+        assertEquals("10.0.0.5", PhoneProtocol.lanAddress(Arrays.asList("10.0.0.5", "8.8.8.8")));
+        assertEquals(null, PhoneProtocol.lanAddress(Arrays.asList("127.0.0.1", "fe80::1")));
+    }
+
     @Test public void rightTokenPasses()    { assertTrue(PhoneProtocol.tokenOk("/api/tiles?t=abc", "abc")); }
     @Test public void tokenAmongOtherParams() { assertTrue(PhoneProtocol.tokenOk("/x?a=1&t=abc", "abc")); }
     @Test public void wrongTokenFails()      { assertFalse(PhoneProtocol.tokenOk("/api/tiles?t=abd", "abc")); }

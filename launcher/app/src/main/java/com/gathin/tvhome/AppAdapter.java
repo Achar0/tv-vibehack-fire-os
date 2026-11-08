@@ -201,7 +201,6 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         List<Entry> everything = new ArrayList<>(row0);
         everything.addAll(otherApps);
         for (Entry e : everything) {
-            originalLabels.put(e.pkg, e.label);
             if (names.containsKey(e.pkg)) e.label = names.get(e.pkg);
             if (userHidden.contains(e.pkg)) hiddenEntries.add(e);
             else byId.put(e.pkg, e);
@@ -275,7 +274,6 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
 
     static final String PREF_ORDER = "tile_order", PREF_HIDDEN = "hidden_tiles", PREF_NAMES = "tile_names";
     private final List<Entry> hiddenEntries = new ArrayList<>();
-    private final Map<String, String> originalLabels = new HashMap<>();
 
     /** Everything the phone page lists: tiles in screen order, then the hidden ones. */
     List<PhoneProtocol.Tile> phoneTiles() {
@@ -338,7 +336,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         Set<String> hiddenNow = new HashSet<>(p.getStringSet(PREF_HIDDEN, Collections.emptySet()));
         hiddenNow.add(items.get(position).pkg);
         p.edit().putStringSet(PREF_HIDDEN, hiddenNow).apply();
-        items.remove(position);
+        hiddenEntries.add(items.remove(position));   // so the phone page can still offer it back
         notifyItemRemoved(position);
     }
 

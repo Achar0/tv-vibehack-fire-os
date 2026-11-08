@@ -97,19 +97,19 @@ public class TvAccessibilityService extends AccessibilityService {
         return running == null ? null : running.frontWindow.split("/", 2)[0];
     }
 
-    /** Puts the phone's text in the selected field of the app on screen; false when there is no field to write in. */
-    static boolean typeText(String text, boolean enter) {
+    /** Puts the phone's text in the selected field; the answer, as JSON, says whether it was written and submitted. */
+    static String typeText(String text, boolean enter) {
         AccessibilityService service = running;
-        if (service == null) return false;
+        String notTyped = "{\"typed\":false,\"entered\":false}";
+        if (service == null) return notTyped;
         AccessibilityNodeInfo field = selectedField(service);
-        if (field == null) return false;
+        if (field == null) return notTyped;
         Bundle args = new Bundle();
         args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
-        boolean done = field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
-        if (done && enter && android.os.Build.VERSION.SDK_INT >= 30) {
-            field.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.getId());
-        }
-        return done;
+        if (!field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) return notTyped;
+        boolean entered = enter && android.os.Build.VERSION.SDK_INT >= 30
+                && field.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.getId());
+        return "{\"typed\":true,\"entered\":" + entered + "}";
     }
 
     /** The field to write in. Amazon's keyboard, when open, is a window of its own: it's skipped, not searched. */
@@ -122,21 +122,17 @@ public class TvAccessibilityService extends AccessibilityService {
             AccessibilityNodeInfo focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
             if (focused != null && focused.isEditable()) return focused;
         }
-        for (AccessibilityNodeInfo root : roots) {
-            AccessibilityNodeInfo editable = firstEditable(root);
-            if (editable != null) return editable;
-        }
-        return null;
+        // Nothing focused: only when the app on screen has exactly one field is it clearly the one meant
+        AccessibilityNodeInfo active = service.getRootInActiveWindow();
+        java.util.List<AccessibilityNodeInfo> fields = new java.util.ArrayList<>();
+        collectEditable(active, fields);
+        return fields.size() == 1 ? fields.get(0) : null;
     }
 
-    private static AccessibilityNodeInfo firstEditable(AccessibilityNodeInfo node) {
-        if (node == null) return null;
-        if (node.isEditable()) return node;
-        for (int i = 0; i < node.getChildCount(); i++) {
-            AccessibilityNodeInfo found = firstEditable(node.getChild(i));
-            if (found != null) return found;
-        }
-        return null;
+    private static void collectEditable(AccessibilityNodeInfo node, java.util.List<AccessibilityNodeInfo> out) {
+        if (node == null) return;
+        if (node.isEditable()) out.add(node);
+        for (int i = 0; i < node.getChildCount(); i++) collectEditable(node.getChild(i), out);
     }
 
     static void hideKeyboard(boolean hide) {
