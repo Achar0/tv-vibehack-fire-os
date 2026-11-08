@@ -141,14 +141,23 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <LinearLayout
+                <!-- Scrolls: its rows are taller than the space under the title. -->
+                <ScrollView
                     android:id="@+id/paneAppearance"
                     android:clipChildren="false"
                     android:clipToPadding="false"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
+                    android:layout_height="match_parent"
+                    android:fillViewport="false"
+                    android:scrollbars="none"
                     android:visibility="gone">
+
+                <LinearLayout
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
 
                     <LinearLayout
                         android:id="@+id/rowWallpaper"
@@ -229,7 +238,7 @@
                     <LinearLayout
                         android:id="@+id/rowHidden"
                         style="@style/SettingsRow"
-                        android:nextFocusDown="@id/rowHidden"
+                        android:nextFocusDown="@+id/rowPhone"
                         android:nextFocusLeft="@id/catAppearance"
                         android:nextFocusRight="@id/rowHidden">
 
@@ -242,6 +251,18 @@
                             style="@style/SettingsRowValue" />
                     </LinearLayout>
 
+                    <LinearLayout
+                        android:id="@id/rowPhone"
+                        style="@style/SettingsRow"
+                        android:nextFocusDown="@id/rowPhone"
+                        android:nextFocusLeft="@id/catAppearance"
+                        android:nextFocusRight="@id/rowPhone">
+
+                        <TextView
+                            style="@style/SettingsRowLabel"
+                            android:text="@string/settings_phone" />
+                    </LinearLayout>
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -252,6 +273,7 @@
                         android:textColor="#66FFFFFF"
                         android:textSize="13sp" />
                 </LinearLayout>
+                </ScrollView>
 
                 <LinearLayout
                     android:id="@+id/paneAbout"

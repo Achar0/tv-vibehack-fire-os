@@ -63,4 +63,6 @@
     <string name="settings_hidden">App nascoste</string>
     <string name="settings_hidden_none">Nessuna</string>
     <string name="settings_hidden_count">%d · OK le mostra</string>
+    <string name="settings_phone">Controllo dal telefono</string>
+    <string name="phone_scan">Inquadra col telefono (stessa Wi-Fi)</string>
 </resources>

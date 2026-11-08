@@ -67,4 +67,6 @@
     <string name="settings_hidden">Hidden apps</string>
     <string name="settings_hidden_none">None</string>
     <string name="settings_hidden_count">%d · OK shows them</string>
+    <string name="settings_phone">Phone control</string>
+    <string name="phone_scan">Scan with your phone (same Wi-Fi)</string>
 </resources>

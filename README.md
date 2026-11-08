@@ -38,6 +38,7 @@ Tested on a Fire TV Stick 4K (`AFTKM`), Fire OS 8.1.8.2 (Android 11).
   - Without that permission, it opens Amazon's Developer Options straight on the Debug ADB row. That
   screen was found by reverse-engineering Amazon's Settings app.
 - **Clock screensaver** replaces Amazon's, using the same idle timer. It shows a page from the home NAS when the NAS can be reached (`ClockDream.TV_URL`), and the clock otherwise.
+- **Phone control**: Settings > Appearance > Phone control shows a QR. The page it opens reorders, renames and hides tiles and types into the field selected on the TV. Local network only, plain HTTP, random code in the address; it stops after 30 idle minutes.
 - **Scheduled wake** (off by default): at the time set in `config.xml` the stick wakes the television over HDMI-CEC and opens that page, unless another app is in use. After 90 minutes without a key press it goes back to standby (`WakeSchedule`, `TvPageActivity`).
 - **Launcher language**: English, Italiano, 中文 (Simplified), independent of the TV's language.
 - **Apple TV–style motion**: critically damped springs, a slight tilt toward the D-pad direction,
