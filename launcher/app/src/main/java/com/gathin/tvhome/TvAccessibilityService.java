@@ -9,6 +9,8 @@ import android.os.SystemClock;
 import android.view.View;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.os.Bundle;
 
 /**
  * Remote helpers that need system-wide access. Both are switchable in res/values/config.xml.
@@ -93,6 +95,34 @@ public class TvAccessibilityService extends AccessibilityService {
     /** The package of the app on screen, or null if the service isn't running. */
     static String frontPackage() {
         return running == null ? null : running.frontWindow.split("/", 2)[0];
+    }
+
+    /** Puts the phone's text in the selected field of the app on screen; false when there is no field to write in. */
+    static boolean typeText(String text, boolean enter) {
+        AccessibilityService service = running;
+        if (service == null) return false;
+        AccessibilityNodeInfo root = service.getRootInActiveWindow();
+        if (root == null) return false;
+        AccessibilityNodeInfo field = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+        if (field == null || !field.isEditable()) field = firstEditable(root);
+        if (field == null) return false;
+        Bundle args = new Bundle();
+        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
+        boolean done = field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
+        if (done && enter && android.os.Build.VERSION.SDK_INT >= 30) {
+            field.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.getId());
+        }
+        return done;
+    }
+
+    private static AccessibilityNodeInfo firstEditable(AccessibilityNodeInfo node) {
+        if (node == null) return null;
+        if (node.isEditable()) return node;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo found = firstEditable(node.getChild(i));
+            if (found != null) return found;
+        }
+        return null;
     }
 
     /** Puts the stick to sleep, which turns the television off over HDMI-CEC. */

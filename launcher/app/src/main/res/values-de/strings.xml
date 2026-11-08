@@ -17,4 +17,6 @@
     <string name="ethernet">LAN</string>
     <string name="offline">Offline</string>
     <string name="not_available">Auf diesem TV nicht verfügbar</string>
+    <string name="settings_phone">Handy-Steuerung</string>
+    <string name="phone_scan">Mit dem Handy scannen (gleiches WLAN)</string>
 </resources>

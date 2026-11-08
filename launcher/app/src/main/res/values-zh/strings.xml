@@ -63,4 +63,6 @@
     <string name="settings_hidden">已隐藏的应用</string>
     <string name="settings_hidden_none">无</string>
     <string name="settings_hidden_count">%d 个 · OK 恢复显示</string>
+    <string name="settings_phone">手机控制</string>
+    <string name="phone_scan">用手机扫码（同一 Wi-Fi）</string>
 </resources>

@@ -229,7 +229,7 @@
                     <LinearLayout
                         android:id="@+id/rowHidden"
                         style="@style/SettingsRow"
-                        android:nextFocusDown="@id/rowHidden"
+                        android:nextFocusDown="@+id/rowPhone"
                         android:nextFocusLeft="@id/catAppearance"
                         android:nextFocusRight="@id/rowHidden">
 
@@ -240,6 +240,18 @@
                         <TextView
                             android:id="@+id/valHidden"
                             style="@style/SettingsRowValue" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@id/rowPhone"
+                        style="@style/SettingsRow"
+                        android:nextFocusDown="@id/rowPhone"
+                        android:nextFocusLeft="@id/catAppearance"
+                        android:nextFocusRight="@id/rowPhone">
+
+                        <TextView
+                            style="@style/SettingsRowLabel"
+                            android:text="@string/settings_phone" />
                     </LinearLayout>
 
                     <TextView

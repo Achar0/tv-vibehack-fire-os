@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TV</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 20px 16px 48px; background: #000; color: #f5f5f7; font: 17px -apple-system, system-ui, sans-serif; }
+  h1 { font-size: 22px; margin: 28px 0 10px; }
+  h1:first-child { margin-top: 0; }
+  small { color: #8e8e93; font-weight: 400; font-size: 13px; }
+  textarea { width: 100%; box-sizing: border-box; height: 84px; padding: 12px; border: 0; border-radius: 12px; background: #1c1c1e; color: inherit; font: inherit; resize: none; }
+  button { border: 0; border-radius: 10px; background: #2c2c2e; color: inherit; font: inherit; padding: 10px 14px; }
+  .main { background: #0a84ff; width: 100%; margin-top: 10px; padding: 14px; font-weight: 600; }
+  #status { min-height: 22px; margin-top: 8px; color: #8e8e93; font-size: 14px; }
+  .tile { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid #1c1c1e; }
+  .tile.off input { color: #636366; }
+  .tile input { flex: 1; min-width: 0; border: 0; background: none; color: inherit; font: inherit; padding: 8px 4px; }
+  .tile button { padding: 8px 11px; }
+</style>
+</head>
+<body>
+<h1>输入文字 <small>Type on the TV</small></h1>
+<textarea id="text" placeholder="先在电视上选中输入框 · Select the field on the TV first"></textarea>
+<button class="main" id="send">发送并确认 · Send + Enter</button>
+<div id="status"></div>
+
+<h1>应用布局 <small>Apps</small></h1>
+<div id="tiles"></div>
+
+<script>
+"use strict";
+const t = new URLSearchParams(location.search).get("t");
+const $ = (id) => document.getElementById(id);
+let tiles = [];
+
+const post = (path, data) => fetch(`${path}?t=${encodeURIComponent(t)}`, {
+  method: "POST",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  body: new URLSearchParams(data),
+}).then((r) => r.json());
+
+function say(text) { $("status").textContent = text; }
+
+$("send").onclick = async () => {
+  try {
+    const r = await post("/api/text", { text: $("text").value, enter: 1 });
+    say(r.typed ? "已发送 · Sent" : "没有找到输入框 · No text field selected on the TV");
+    if (r.typed) $("text").value = "";
+  } catch { say("连接失败 · Connection lost"); }
+};
+
+function move(i, by) {
+  const j = i + by;
+  if (j < 0 || j >= tiles.length) return;
+  [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+  draw();
+  post("/api/order", { ids: tiles.map((x) => x.id).join("\n") });
+}
+
+function button(label, action) {
+  const b = document.createElement("button");
+  b.textContent = label;
+  b.onclick = action;
+  return b;
+}
+
+function draw() {
+  $("tiles").replaceChildren(...tiles.map((x, i) => {
+    const row = document.createElement("div");
+    row.className = "tile" + (x.hidden ? " off" : "");
+    const name = document.createElement("input");
+    name.value = x.label;
+    name.onchange = () => { post("/api/rename", { id: x.id, name: name.value }).then(load); };
+    row.append(name, button("↑", () => move(i, -1)), button("↓", () => move(i, 1)),
+      button(x.hidden ? "显示 Show" : "隐藏 Hide", async () => {
+        await post("/api/hide", { id: x.id, hidden: x.hidden ? 0 : 1 });
+        load();
+      }));
+    return row;
+  }));
+}
+
+async function load() {
+  try {
+    tiles = await (await fetch(`/api/tiles?t=${encodeURIComponent(t)}`)).json();
+    draw();
+  } catch { say("连接失败 · Connection lost"); }
+}
+load();
+</script>
+</body>
+</html>

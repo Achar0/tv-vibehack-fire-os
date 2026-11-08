@@ -147,6 +147,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener, S
                 AnimationUtils.loadAnimation(this, R.anim.tile_enter), 0.06f));
         adapter = new AppAdapter(this, this, COLUMNS);
         grid.setAdapter(adapter);
+        PhoneServer.setHost(new PhoneServer.Host() {
+            @Override public List<PhoneProtocol.Tile> tiles() { return adapter.phoneTiles(); }
+            @Override public void setOrder(List<String> ids) { adapter.setPhoneOrder(ids); }
+            @Override public void setHidden(String id, boolean hidden) { adapter.setPhoneHidden(id, hidden); }
+            @Override public void rename(String id, String name) { adapter.renameTile(id, name); }
+        });
         // Installs and removals (Aurora Store, TV Bro, adb) change the tiles; rebuilt on the next resume.
         IntentFilter pkgs = new IntentFilter();
         pkgs.addAction(Intent.ACTION_PACKAGE_ADDED);

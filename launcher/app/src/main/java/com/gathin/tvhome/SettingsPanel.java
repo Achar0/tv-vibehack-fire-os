@@ -195,6 +195,7 @@ final class SettingsPanel {
             if (host.hiddenCount() > 0) host.showHiddenApps();
             refreshValues();
         });
+        find(R.id.rowPhone).setOnClickListener(v -> activity.startActivity(new android.content.Intent(activity, PhoneLinkActivity.class)));
         find(R.id.rowStats).setOnClickListener(v -> {
             host.setShowStats(!host.showStats());
             refreshValues();

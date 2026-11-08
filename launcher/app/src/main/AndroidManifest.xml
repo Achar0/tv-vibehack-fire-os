@@ -59,6 +59,13 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|fontScale|density"
             android:screenOrientation="landscape" />
 
+        <activity
+            android:name=".PhoneLinkActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+            android:screenOrientation="landscape" />
+
         <!-- The NAS page opened by the alarm in WakeSchedule. -->
         <activity
             android:name=".TvPageActivity"
