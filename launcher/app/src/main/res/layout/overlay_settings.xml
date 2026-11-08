@@ -141,14 +141,23 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <LinearLayout
+                <!-- Scrolls: its rows are taller than the space under the title. -->
+                <ScrollView
                     android:id="@+id/paneAppearance"
                     android:clipChildren="false"
                     android:clipToPadding="false"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
+                    android:layout_height="match_parent"
+                    android:fillViewport="false"
+                    android:scrollbars="none"
                     android:visibility="gone">
+
+                <LinearLayout
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
 
                     <LinearLayout
                         android:id="@+id/rowWallpaper"
@@ -264,6 +273,7 @@
                         android:textColor="#66FFFFFF"
                         android:textSize="13sp" />
                 </LinearLayout>
+                </ScrollView>
 
                 <LinearLayout
                     android:id="@+id/paneAbout"
