@@ -125,6 +125,12 @@ public class TvAccessibilityService extends AccessibilityService {
         return null;
     }
 
+    static void hideKeyboard(boolean hide) {
+        TvAccessibilityService service = running;
+        if (service == null) return;
+        service.handler.post(() -> service.getSoftKeyboardController().setShowMode(hide ? SHOW_MODE_HIDDEN : SHOW_MODE_AUTO));
+    }
+
     /** Puts the stick to sleep, which turns the television off over HDMI-CEC. */
     static void standby() {
         if (running != null) running.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);

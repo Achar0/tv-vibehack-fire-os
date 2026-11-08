@@ -89,6 +89,11 @@ async function load() {
   } catch { say("连接失败 · Connection lost"); }
 }
 load();
+
+// While this page is on screen, the TV hides its own keyboard
+const ping = () => { if (document.visibilityState === "visible") fetch(`/api/ping?t=${encodeURIComponent(t)}`).catch(() => {}); };
+setInterval(ping, 15000);
+document.addEventListener("visibilitychange", ping);
 </script>
 </body>
 </html>

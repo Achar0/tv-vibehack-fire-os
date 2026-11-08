@@ -25,6 +25,14 @@ final class PhoneProtocol {
         }
     }
 
+    /** The phone page checks in while it's on screen; after this long without it, it's gone. */
+    private static final long PAGE_GONE_MS = 45_000L;
+
+    /** Whether the phone page counts as open, given when it was last heard from (0 = never). */
+    static boolean pageOpen(long lastSeen, long now) {
+        return lastSeen != 0 && now - lastSeen < PAGE_GONE_MS;
+    }
+
     static String path(String target) {
         int q = target.indexOf('?');
         return q < 0 ? target : target.substring(0, q);

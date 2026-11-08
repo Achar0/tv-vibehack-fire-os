@@ -11,7 +11,11 @@ import java.util.HashSet;
 import java.util.Map;
 
 public class PhoneProtocolTest {
-    @Test public void rightTokenPasses()     { assertTrue(PhoneProtocol.tokenOk("/api/tiles?t=abc", "abc")); }
+    @Test public void keyboardHiddenWhilePageIsSeen()  { assertTrue(PhoneProtocol.pageOpen(1_000L, 45_999L)); }
+    @Test public void keyboardReturnsAfterThePageGoes() { assertFalse(PhoneProtocol.pageOpen(1_000L, 46_000L)); }
+    @Test public void noPageSeenYetIsNotOpen()         { assertFalse(PhoneProtocol.pageOpen(0L, 1_000L)); }
+
+    @Test public void rightTokenPasses()    { assertTrue(PhoneProtocol.tokenOk("/api/tiles?t=abc", "abc")); }
     @Test public void tokenAmongOtherParams() { assertTrue(PhoneProtocol.tokenOk("/x?a=1&t=abc", "abc")); }
     @Test public void wrongTokenFails()      { assertFalse(PhoneProtocol.tokenOk("/api/tiles?t=abd", "abc")); }
     @Test public void missingTokenFails()    { assertFalse(PhoneProtocol.tokenOk("/api/tiles", "abc")); }

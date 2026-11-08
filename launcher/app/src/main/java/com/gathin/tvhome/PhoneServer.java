@@ -46,6 +46,8 @@ final class PhoneServer {
     private final String token;
     private final ServerSocket socket;
     private volatile long lastUsed = System.currentTimeMillis();
+    private volatile long pageSeen;
+    private boolean keyboardHidden;
 
     static void setHost(Host h) {
         host = h;
@@ -77,6 +79,13 @@ final class PhoneServer {
         socket.setSoTimeout(1_000);
     }
 
+    /** Amazon's on-screen keyboard stays away while the phone is the keyboard. */
+    private void updateKeyboard(boolean hide) {
+        if (hide == keyboardHidden) return;
+        keyboardHidden = hide;
+        TvAccessibilityService.hideKeyboard(hide);
+    }
+
     private void acceptLoop() {
         while (System.currentTimeMillis() - lastUsed < IDLE_MS) {
             try (Socket client = socket.accept()) {
@@ -86,7 +95,9 @@ final class PhoneServer {
                 // checks the idle limit
             } catch (IOException | RuntimeException ignored) {   // a bad request must not stop the server
             }
+            updateKeyboard(PhoneProtocol.pageOpen(pageSeen, System.currentTimeMillis()));
         }
+        updateKeyboard(false);
         synchronized (PhoneServer.class) {
             running = null;
         }
@@ -126,7 +137,8 @@ final class PhoneServer {
             respond(out, "403 Forbidden", "text/plain", "code required".getBytes(StandardCharsets.UTF_8));
             return;
         }
-        lastUsed = System.currentTimeMillis();
+        lastUsed = pageSeen = System.currentTimeMillis();
+        updateKeyboard(true);
         route(out, request[0], PhoneProtocol.path(request[1]), PhoneProtocol.form(new String(body, StandardCharsets.UTF_8)));
     }
 
@@ -135,6 +147,8 @@ final class PhoneServer {
             respond(out, "200 OK", "text/html; charset=utf-8", asset("phone.html"));
         } else if (method.equals("GET") && path.equals("/api/tiles")) {
             json(out, onMain(() -> PhoneProtocol.tilesJson(host.tiles())));
+        } else if (method.equals("GET") && path.equals("/api/ping")) {
+            json(out, "{\"ok\":true}");
         } else if (method.equals("POST") && path.equals("/api/text")) {
             boolean typed = TvAccessibilityService.typeText(f.getOrDefault("text", ""), "1".equals(f.get("enter")));
             json(out, "{\"typed\":" + typed + "}");
