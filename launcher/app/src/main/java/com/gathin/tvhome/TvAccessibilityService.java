@@ -49,7 +49,29 @@ public class TvAccessibilityService extends AccessibilityService {
     private Thread logWatch;
     private volatile Process logcat;
     private volatile boolean watching;
-    private static final long COVER_MAX_MS = 1500;
+    /**
+     * Pressing Home makes Android hold every app's activity start for 5 s (app-switch protection; the permission
+     * that skips it can't be granted to apps), so the launcher can't really be back sooner. Slightly over that.
+     */
+    private static final long COVER_MAX_MS = 5_500;
+    /** The launcher as last seen, shown as the cover during that wait. */
+    private static volatile android.graphics.Bitmap snapshot;
+    private static final float SNAPSHOT_SCALE = 0.5f;
+
+    /** Called when the launcher is about to be left. */
+    static void rememberLauncher(View root) {
+        if (root.getWidth() == 0 || root.getHeight() == 0) return;
+        try {
+            android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(
+                    (int) (root.getWidth() * SNAPSHOT_SCALE), (int) (root.getHeight() * SNAPSHOT_SCALE),
+                    android.graphics.Bitmap.Config.RGB_565);
+            android.graphics.Canvas canvas = new android.graphics.Canvas(b);
+            canvas.scale(SNAPSHOT_SCALE, SNAPSHOT_SCALE);
+            root.draw(canvas);
+            snapshot = b;
+        } catch (RuntimeException | OutOfMemoryError ignored) {   // the cover falls back to black
+        }
+    }
     private final Runnable hideCover = this::hideCover;
 
     private final Runnable redirectIfStillAmazonHome = () -> {
@@ -139,8 +161,11 @@ public class TvAccessibilityService extends AccessibilityService {
         handler.removeCallbacks(hideCover);
         handler.postDelayed(hideCover, COVER_MAX_MS);
         if (cover != null) return;
-        cover = new View(this);
-        cover.setBackgroundColor(0xFF000000);
+        android.widget.ImageView picture = new android.widget.ImageView(this);
+        picture.setScaleType(android.widget.ImageView.ScaleType.FIT_XY);
+        picture.setBackgroundColor(0xFF000000);
+        if (snapshot != null) picture.setImageBitmap(snapshot);
+        cover = picture;
         android.view.WindowManager.LayoutParams lp = new android.view.WindowManager.LayoutParams(
                 android.view.WindowManager.LayoutParams.MATCH_PARENT, android.view.WindowManager.LayoutParams.MATCH_PARENT,
                 android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
@@ -198,6 +223,7 @@ public class TvAccessibilityService extends AccessibilityService {
 
     @Override
     protected boolean onKeyEvent(KeyEvent event) {
+        if (cover != null) return true;   // Amazon's home is underneath: keys must not act on what can't be seen
         if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
             lastBackUp = event.getEventTime();   // same uptime clock as SystemClock.uptimeMillis()
         }
