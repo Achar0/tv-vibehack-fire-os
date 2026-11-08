@@ -35,17 +35,26 @@ const t = new URLSearchParams(location.search).get("t");
 const $ = (id) => document.getElementById(id);
 let tiles = [];
 
-const post = (path, data) => fetch(`${path}?t=${encodeURIComponent(t)}`, {
+// A request started just before the phone locks can hang forever: give up and let the caller retry
+function withTimeout(url, options = {}) {
+  const stop = new AbortController();
+  const timer = setTimeout(() => stop.abort(), 6000);
+  return fetch(url, { ...options, signal: stop.signal }).finally(() => clearTimeout(timer));
+}
+
+const post = (path, data) => withTimeout(`${path}?t=${encodeURIComponent(t)}`, {
   method: "POST",
   headers: { "Content-Type": "application/x-www-form-urlencoded" },
   body: new URLSearchParams(data),
 }).then((r) => r.json());
 
+const postRetrying = (path, data) => post(path, data).catch(() => post(path, data));
+
 function say(text) { $("status").textContent = text; }
 
 $("send").onclick = async () => {
   try {
-    const r = await post("/api/text", { text: $("text").value, enter: 1 });
+    const r = await postRetrying("/api/text", { text: $("text").value, enter: 1 });
     say(r.typed ? "已发送 · Sent" : "没有找到输入框 · No text field selected on the TV");
     if (r.typed) $("text").value = "";
   } catch { say("连接失败 · Connection lost"); }
@@ -84,16 +93,17 @@ function draw() {
 
 async function load() {
   try {
-    tiles = await (await fetch(`/api/tiles?t=${encodeURIComponent(t)}`)).json();
+    tiles = await (await withTimeout(`/api/tiles?t=${encodeURIComponent(t)}`)).json();
     draw();
+    say("");
   } catch { say("连接失败 · Connection lost"); }
 }
 load();
 
 // While this page is on screen, the TV hides its own keyboard
-const ping = () => { if (document.visibilityState === "visible") fetch(`/api/ping?t=${encodeURIComponent(t)}`).catch(() => {}); };
+const ping = () => { if (document.visibilityState === "visible") withTimeout(`/api/ping?t=${encodeURIComponent(t)}`).catch(() => {}); };
 setInterval(ping, 15000);
-document.addEventListener("visibilitychange", ping);
+document.addEventListener("visibilitychange", () => { ping(); if (document.visibilityState === "visible") load(); });
 </script>
 </body>
 </html>

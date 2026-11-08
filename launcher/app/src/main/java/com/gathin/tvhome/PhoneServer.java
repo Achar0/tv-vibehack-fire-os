@@ -29,6 +29,7 @@ final class PhoneServer {
     private static final long IDLE_MS = 30 * 60_000L;
     private static final int MAX_BODY = 64 * 1024;
     private static final int READ_TIMEOUT_MS = 5_000;
+    private static final int WORKERS = 6;
 
     /** What the page changes. Always called on the main thread. */
     interface Host {
@@ -48,6 +49,7 @@ final class PhoneServer {
     private volatile long lastUsed = System.currentTimeMillis();
     private volatile long pageSeen;
     private boolean keyboardHidden;
+    private final java.util.concurrent.ExecutorService workers = java.util.concurrent.Executors.newFixedThreadPool(WORKERS);
 
     static void setHost(Host h) {
         host = h;
@@ -80,17 +82,25 @@ final class PhoneServer {
     }
 
     /** Amazon's on-screen keyboard stays away while the phone is the keyboard. */
-    private void updateKeyboard(boolean hide) {
+    private synchronized void updateKeyboard(boolean hide) {
         if (hide == keyboardHidden) return;
         keyboardHidden = hide;
         TvAccessibilityService.hideKeyboard(hide);
     }
 
+    private void serve(Socket connection) {
+        try (Socket client = connection) {
+            client.setSoTimeout(READ_TIMEOUT_MS);
+            handle(client);
+        } catch (IOException | RuntimeException ignored) {   // a bad request must not stop the server
+        }
+    }
+
     private void acceptLoop() {
         while (System.currentTimeMillis() - lastUsed < IDLE_MS) {
-            try (Socket client = socket.accept()) {
-                client.setSoTimeout(READ_TIMEOUT_MS);
-                handle(client);
+            try {
+                Socket client = socket.accept();
+                workers.execute(() -> serve(client));   // a phone that just woke up leaves silent connections behind
             } catch (SocketTimeoutException idle) {
                 // checks the idle limit
             } catch (IOException | RuntimeException ignored) {   // a bad request must not stop the server
@@ -98,6 +108,7 @@ final class PhoneServer {
             updateKeyboard(PhoneProtocol.pageOpen(pageSeen, System.currentTimeMillis()));
         }
         updateKeyboard(false);
+        workers.shutdown();
         synchronized (PhoneServer.class) {
             running = null;
         }

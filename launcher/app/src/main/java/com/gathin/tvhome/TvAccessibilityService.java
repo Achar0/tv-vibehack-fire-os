@@ -101,10 +101,7 @@ public class TvAccessibilityService extends AccessibilityService {
     static boolean typeText(String text, boolean enter) {
         AccessibilityService service = running;
         if (service == null) return false;
-        AccessibilityNodeInfo root = service.getRootInActiveWindow();
-        if (root == null) return false;
-        AccessibilityNodeInfo field = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
-        if (field == null || !field.isEditable()) field = firstEditable(root);
+        AccessibilityNodeInfo field = selectedField(service);
         if (field == null) return false;
         Bundle args = new Bundle();
         args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
@@ -113,6 +110,23 @@ public class TvAccessibilityService extends AccessibilityService {
             field.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.getId());
         }
         return done;
+    }
+
+    /** The field to write in. Amazon's keyboard, when open, is a window of its own: it's skipped, not searched. */
+    private static AccessibilityNodeInfo selectedField(AccessibilityService service) {
+        java.util.List<AccessibilityNodeInfo> roots = new java.util.ArrayList<>();
+        for (android.view.accessibility.AccessibilityWindowInfo w : service.getWindows()) {
+            if (w.getType() != android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD && w.getRoot() != null) roots.add(w.getRoot());
+        }
+        for (AccessibilityNodeInfo root : roots) {
+            AccessibilityNodeInfo focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+            if (focused != null && focused.isEditable()) return focused;
+        }
+        for (AccessibilityNodeInfo root : roots) {
+            AccessibilityNodeInfo editable = firstEditable(root);
+            if (editable != null) return editable;
+        }
+        return null;
     }
 
     private static AccessibilityNodeInfo firstEditable(AccessibilityNodeInfo node) {
